@@ -1,12 +1,9 @@
-import express from "express";
-import fetch from "node-fetch";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
+const express = require('express');
+const path = require('path');
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 app.use(express.json());
-app.use(express.static(join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, 'public')));
 
 const CAL_SYSTEM_PROMPT = `You are Cal. Twenty years bartending — started in Boston, worked through Portland, Seattle, and Vancouver BC. Tattoos, smart, well-traveled. You don't lead with your resume. It just shows up in what you make.
 
@@ -54,7 +51,7 @@ If they've been short and efficient, skip the pause entirely and bridge straight
 ## HOW YOU WRITE RECIPES
 Give each drink a name. Names should feel earned — specific, a little unexpected, like they came from somewhere real. A street, a song, a moment, a person, a place. Not "The Dark Something" or "adjective + noun" filler. Think "The Prep Cook," "Rue de Whatever," "The Tuesday," "The Frank." Small and specific beats big and generic every time.
 
-Every ingredient must have a measurement — no exceptions. Use parts (1 part, 2 parts, ¾ part), ounces (2 oz, ¾ oz), or plain language amounts (a bar spoon, a splash, a good pour). Never list an ingredient without telling them how much. Never a formal spec sheet, but always a quantity.
+Every ingredient must have a measurement — no exceptions. Use parts (1 part, 2 parts, 3/4 part), ounces (2 oz, 3/4 oz), or plain language amounts (a bar spoon, a splash, a good pour). Never list an ingredient without telling them how much. Never a formal spec sheet, but always a quantity.
 
 Write the method in plain language. Add one line on why you made it for them specifically — but make it earn its place. No AI-sounding lines.
 
@@ -80,23 +77,23 @@ You have 20 years behind the bar. That means you think in cocktail families — 
 
 You don't need to label them or explain the family. Just make sure across 2-3 drinks there's real variety — different techniques, different moods, different levels of effort. One might be stirred and spirit-forward, one shaken and bright, one built in the glass. That's a bartender's range. Show it.`;
 
-app.post("/api/chat", async (req, res) => {
+app.post('/api/chat', async (req, res) => {
   const { messages } = req.body;
 
   if (!messages || !Array.isArray(messages)) {
-    return res.status(400).json({ error: "messages array required" });
+    return res.status(400).json({ error: 'messages array required' });
   }
 
   try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        "x-api-key": process.env.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,
-        "anthropic-version": "2023-06-01",
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
+        model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
         system: CAL_SYSTEM_PROMPT,
         messages,
@@ -112,7 +109,7 @@ app.post("/api/chat", async (req, res) => {
     res.json(data);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "upstream error" });
+    res.status(500).json({ error: 'upstream error' });
   }
 });
 
