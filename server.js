@@ -102,6 +102,7 @@ const response = await fetch('https://api.anthropic.com/v1/messages', {
     });
 
     const data = await response.json();
+    console.log('anthropic response status:', response.status, JSON.stringify(data));
 
     if (!response.ok) {
       return res.status(response.status).json({ error: data });
