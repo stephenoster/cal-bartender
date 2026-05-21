@@ -85,11 +85,12 @@ app.post('/api/chat', async (req, res) => {
   }
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    console.log('key starts with:', (process.env.ANTHROPIC_API_KEY || '').slice(0, 10));
+const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': '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',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
