@@ -116,4 +116,4 @@ const response = await fetch('https://api.anthropic.com/v1/messages', {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Cal running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Collin running on port ${PORT}`));
