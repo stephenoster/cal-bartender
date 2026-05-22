@@ -1,9 +1,16 @@
 const express = require('express');
 const path = require('path');
+const twilio = require('twilio');
 
 const app = express();
 app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+// In-memory conversation store (phone number → message history)
+// Resets on server restart — good enough for now, replaced by DB later
+const conversations = {};
+const MAX_HISTORY = 20;
 
 const COLLIN_SYSTEM_PROMPT = `You are Collin. Twenty years bartending — started in Boston, worked through Portland, Seattle, and Vancouver BC. Tattoos, smart, well-traveled. You don't lead with your resume. It just shows up in what you make.
 
@@ -87,6 +94,7 @@ Cocktail families to draw from:
 - Spritzes: wine or low-ABV spirit + sparkling + something bitter or aromatic
 - Flips or richer builds: egg yolk or whole egg for body and texture when it fits the mood`;
 
+// ── existing web chat endpoint ──────────────────────────────────────────────
 app.post('/api/chat', async (req, res) => {
   const { messages } = req.body;
 
@@ -122,6 +130,123 @@ app.post('/api/chat', async (req, res) => {
     res.status(500).json({ error: 'upstream error' });
   }
 });
+
+// ── Twilio SMS webhook ──────────────────────────────────────────────────────
+app.post('/sms', async (req, res) => {
+  // Validate the request is actually from Twilio
+  const twilioSignature = req.headers['x-twilio-signature'];
+  const webhookUrl = 'https://cal-bartender-production.up.railway.app/sms';
+
+  const isValid = twilio.validateRequest(
+    process.env.TWILIO_AUTH_TOKEN,
+    twilioSignature,
+    webhookUrl,
+    req.body
+  );
+
+  if (!isValid) {
+    console.warn('Invalid Twilio signature — request rejected');
+    return res.status(403).send('Forbidden');
+  }
+
+  const userPhone = req.body.From;
+  const incomingMessage = req.body.Body?.trim();
+
+  if (!incomingMessage) {
+    res.set('Content-Type', 'text/xml');
+    return res.send('<Response></Response>');
+  }
+
+  console.log(`SMS from ${userPhone}: ${incomingMessage}`);
+
+  // Initialize conversation history for new users
+  if (!conversations[userPhone]) {
+    conversations[userPhone] = [];
+  }
+
+  // Add user message to history
+  conversations[userPhone].push({ role: 'user', content: incomingMessage });
+
+  // Trim history if it gets too long
+  if (conversations[userPhone].length > MAX_HISTORY) {
+    conversations[userPhone] = conversations[userPhone].slice(-MAX_HISTORY);
+  }
+
+  const client = twilio(
+    process.env.TWILIO_ACCOUNT_SID,
+    process.env.TWILIO_AUTH_TOKEN
+  );
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 1000,
+        system: COLLIN_SYSTEM_PROMPT,
+        messages: conversations[userPhone],
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(`Anthropic error: ${JSON.stringify(data)}`);
+    }
+
+    const reply = data.content[0].text;
+
+    // Add Collin's reply to history
+    conversations[userPhone].push({ role: 'assistant', content: reply });
+
+    // SMS has a 1600 char limit — split if needed
+    const chunks = reply.length <= 1600 ? [reply] : splitMessage(reply, 1580);
+
+    for (const chunk of chunks) {
+      await client.messages.create({
+        body: chunk,
+        from: process.env.TWILIO_PHONE_NUMBER,
+        to: userPhone,
+      });
+    }
+  } catch (err) {
+    console.error('Error generating SMS reply:', err);
+
+    await client.messages.create({
+      body: "Hey — something went sideways on my end. Give me a second and try again.",
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: userPhone,
+    });
+  }
+
+  // Always respond to Twilio with empty TwiML (replies sent via API above)
+  res.set('Content-Type', 'text/xml');
+  res.send('<Response></Response>');
+});
+
+// Helper: split long messages at paragraph breaks
+function splitMessage(text, maxLength) {
+  const chunks = [];
+  const paragraphs = text.split(/\n\n+/);
+  let current = '';
+
+  for (const para of paragraphs) {
+    const addition = current ? `\n\n${para}` : para;
+    if ((current + addition).length <= maxLength) {
+      current += addition;
+    } else {
+      if (current) chunks.push(current);
+      current = para;
+    }
+  }
+  if (current) chunks.push(current);
+  return chunks;
+}
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Collin running on port ${PORT}`));
