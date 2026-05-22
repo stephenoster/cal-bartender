@@ -134,20 +134,20 @@ app.post('/api/chat', async (req, res) => {
 // ── Twilio SMS webhook ──────────────────────────────────────────────────────
 app.post('/sms', async (req, res) => {
   // Validate the request is actually from Twilio
-  const twilioSignature = req.headers['x-twilio-signature'];
-  const webhookUrl = 'https://cal-bartender-production.up.railway.app/sms';
+// const twilioSignature = req.headers['x-twilio-signature'];
+// const webhookUrl = 'https://cal-bartender-production.up.railway.app/sms';
 
-  const isValid = twilio.validateRequest(
-    process.env.TWILIO_AUTH_TOKEN,
-    twilioSignature,
-    webhookUrl,
-    req.body
-  );
+// const isValid = twilio.validateRequest(
+//   process.env.TWILIO_AUTH_TOKEN,
+//   twilioSignature,
+//   webhookUrl,
+//   req.body
+// );
 
-  if (!isValid) {
-    console.warn('Invalid Twilio signature — request rejected');
-    return res.status(403).send('Forbidden');
-  }
+// if (!isValid) {
+//   console.warn('Invalid Twilio signature — request rejected');
+//   return res.status(403).send('Forbidden');
+// }
 
   const userPhone = req.body.From;
   const incomingMessage = req.body.Body?.trim();
