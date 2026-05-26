@@ -133,7 +133,6 @@ app.post('/api/chat', async (req, res) => {
 
 // ── Twilio SMS webhook ──────────────────────────────────────────────────────
 app.post('/sms', async (req, res) => {
-app.post('/sms', async (req, res) => {
   console.log('SID:', process.env.TWILIO_ACCOUNT_SID?.slice(0, 6));
   console.log('TOKEN:', process.env.TWILIO_AUTH_TOKEN?.slice(0, 6));
   console.log('FROM:', process.env.TWILIO_PHONE_NUMBER);
