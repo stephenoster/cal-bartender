@@ -92,7 +92,9 @@ Cocktail families to draw from:
 - Smashes: spirit + muddled fresh herb or fruit + ice, rustic and seasonal
 - Collins / fizz: spirit + citrus + sweet + soda, longer and lighter
 - Spritzes: wine or low-ABV spirit + sparkling + something bitter or aromatic
-- Flips or richer builds: egg yolk or whole egg for body and texture when it fits the mood`;
+- Flips or richer builds: egg yolk or whole egg for body and texture when it fits the mood
+
+When you deliver a full recipe, always append [RECIPE] on a new line at the very end. Nothing after it.`;
 
 // ── existing web chat endpoint ──────────────────────────────────────────────
 app.post('/api/chat', async (req, res) => {
