@@ -217,6 +217,9 @@ app.post('/sms', async (req, res) => {
     // SMS has a 1600 char limit — split if needed
     const chunks = reply.length <= 1600 ? [reply] : splitMessage(reply, 1580);
 
+    console.log('Sending to:', userPhone);
+    console.log('From:', process.env.TWILIO_PHONE_NUMBER);
+
     for (const chunk of chunks) {
       await client.messages.create({
         body: chunk,
