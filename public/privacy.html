@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — Collin Thomas</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --gunmetal: #32373B;
+      --iron: #4A5859;
+      --almond: #F4D6CC;
+      --honey: #F4B860;
+      --brick: #C83E4D;
+      --off-white: #F9F4F0;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background-color: var(--gunmetal);
+      color: var(--almond);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      min-height: 100vh;
+    }
+
+    header {
+      border-bottom: 1px solid rgba(244, 214, 204, 0.15);
+      padding: 24px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .wordmark {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem;
+      color: var(--almond);
+      text-decoration: none;
+      letter-spacing: 0.02em;
+    }
+
+    .back-link {
+      font-size: 0.8rem;
+      color: var(--iron);
+      text-decoration: none;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+
+    .back-link:hover { color: var(--honey); }
+
+    main {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 64px 40px 100px;
+    }
+
+    .doc-label {
+      font-size: 0.7rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--honey);
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.4rem;
+      font-weight: 600;
+      color: var(--off-white);
+      line-height: 1.2;
+      margin-bottom: 12px;
+    }
+
+    .last-updated {
+      font-size: 0.78rem;
+      color: var(--iron);
+      margin-bottom: 56px;
+      letter-spacing: 0.03em;
+    }
+
+    .divider {
+      width: 40px;
+      height: 2px;
+      background: var(--brick);
+      margin-bottom: 56px;
+    }
+
+    section {
+      margin-bottom: 44px;
+    }
+
+    h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--honey);
+      margin-bottom: 14px;
+      letter-spacing: 0.01em;
+    }
+
+    p {
+      font-size: 0.95rem;
+      line-height: 1.8;
+      color: rgba(244, 214, 204, 0.8);
+      margin-bottom: 12px;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin-bottom: 12px;
+    }
+
+    ul li {
+      font-size: 0.95rem;
+      line-height: 1.8;
+      color: rgba(244, 214, 204, 0.8);
+      padding-left: 20px;
+      position: relative;
+      margin-bottom: 6px;
+    }
+
+    ul li::before {
+      content: '—';
+      position: absolute;
+      left: 0;
+      color: var(--brick);
+    }
+
+    strong {
+      color: var(--almond);
+      font-weight: 500;
+    }
+
+    footer {
+      border-top: 1px solid rgba(244, 214, 204, 0.1);
+      padding: 32px 40px;
+      text-align: center;
+    }
+
+    footer p {
+      font-size: 0.75rem;
+      color: var(--iron);
+      margin: 0;
+    }
+
+    @media (max-width: 600px) {
+      header { padding: 20px 24px; }
+      main { padding: 48px 24px 80px; }
+      h1 { font-size: 1.9rem; }
+      footer { padding: 24px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a href="/" class="wordmark">Collin Thomas</a>
+    <a href="/" class="back-link">← Back</a>
+  </header>
+
+  <main>
+    <div class="doc-label">Legal</div>
+    <h1>Privacy Policy</h1>
+    <p class="last-updated">Last updated: May 25, 2026</p>
+    <div class="divider"></div>
+
+    <section>
+      <p>Collin Thomas ("the Service") is operated as a personal project. This policy explains how we handle information when you use our SMS-based cocktail recommendation service.</p>
+    </section>
+
+    <section>
+      <h2>What we collect</h2>
+      <ul>
+        <li>Your phone number</li>
+        <li>The content of messages you send to the Service, including any photos of your bar or ingredients</li>
+        <li>Conversation history, which may be stored to personalize future sessions and remember your preferences</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>How we use it</h2>
+      <p>Your phone number is used solely to send you replies. Your message content — including text and any photos you send — is used to generate personalized cocktail recommendations. Conversation history may be stored persistently to provide continuity across sessions, remember your preferences, and improve recommendations over time.</p>
+    </section>
+
+    <section>
+      <h2>Sub-processors</h2>
+      <p>We use the following third-party services to operate:</p>
+      <ul>
+        <li><strong>Anthropic</strong> — AI processing of your messages and photos to generate recommendations</li>
+        <li><strong>Twilio</strong> — SMS delivery and phone number management</li>
+      </ul>
+      <p>We do not sell, share, or distribute your information to any other third party.</p>
+    </section>
+
+    <section>
+      <h2>Photos</h2>
+      <p>If you send a photo of your bar or ingredients, it is processed by Anthropic's API for the sole purpose of generating cocktail recommendations. Photos are not stored permanently.</p>
+    </section>
+
+    <section>
+      <h2>Opting out</h2>
+      <p>Reply <strong>STOP</strong> at any time to stop receiving messages and delete your data from our system. Reply <strong>START</strong> to resume.</p>
+    </section>
+
+    <section>
+      <h2>Contact</h2>
+      <p>For questions about this policy, text the number directly.</p>
+    </section>
+
+  </main>
+
+  <footer>
+    <p>© 2026 Collin Thomas &nbsp;·&nbsp; <a href="/terms.html" style="color: var(--iron); text-decoration: none;">Terms of Service</a></p>
+  </footer>
+
+</body>
+</html>
