@@ -176,10 +176,16 @@ app.post('/sms', async (req, res) => {
     conversations[userPhone] = conversations[userPhone].slice(-MAX_HISTORY);
   }
 
-  const client = twilio(
-    process.env.TWILIO_ACCOUNT_SID,
-    process.env.TWILIO_AUTH_TOKEN
-  );
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+
+  if (!accountSid || !authToken) {
+    console.error('Missing Twilio credentials');
+    res.set('Content-Type', 'text/xml');
+    return res.send('<Response></Response>');
+  }
+
+  const client = twilio(accountSid, authToken);
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -221,11 +227,15 @@ app.post('/sms', async (req, res) => {
   } catch (err) {
     console.error('Error generating SMS reply:', err);
 
-    await client.messages.create({
-      body: "Hey — something went sideways on my end. Give me a second and try again.",
-      from: process.env.TWILIO_PHONE_NUMBER,
-      to: userPhone,
-    });
+    try {
+      await client.messages.create({
+        body: "Hey — something went sideways on my end. Give me a second and try again.",
+        from: process.env.TWILIO_PHONE_NUMBER,
+        to: userPhone,
+      });
+    } catch (twilioErr) {
+      console.error('Failed to send error SMS:', twilioErr);
+    }
   }
 
   // Always respond to Twilio with empty TwiML (replies sent via API above)
