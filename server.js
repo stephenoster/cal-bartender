@@ -1,15 +1,15 @@
 const express = require('express');
 const path = require('path');
 const twilio = require('twilio');
+const { PrismaClient } = require('@prisma/client');
 
 const app = express();
+const prisma = new PrismaClient();
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// In-memory conversation store (phone number → message history)
-// Resets on server restart — good enough for now, replaced by DB later
-const conversations = {};
 const MAX_HISTORY = 20;
 
 const COLLIN_SYSTEM_PROMPT = `You are Collin. Twenty years bartending — started in Boston, worked through Portland, Seattle, and Vancouver BC. Tattoos, smart, well-traveled. You don't lead with your resume. It just shows up in what you make.
@@ -159,18 +159,25 @@ app.post('/sms', async (req, res) => {
 
   console.log(`SMS from ${userPhone}: ${incomingMessage}`);
 
-  // Initialize conversation history for new users
-  if (!conversations[userPhone]) {
-    conversations[userPhone] = [];
-  }
+  // Upsert user and save incoming message
+  await prisma.user.upsert({
+    where: { phone: userPhone },
+    update: {},
+    create: { phone: userPhone },
+  });
 
-  // Add user message to history
-  conversations[userPhone].push({ role: 'user', content: incomingMessage });
+  await prisma.message.create({
+    data: { phone: userPhone, role: 'user', content: incomingMessage },
+  });
 
-  // Trim history if it gets too long
-  if (conversations[userPhone].length > MAX_HISTORY) {
-    conversations[userPhone] = conversations[userPhone].slice(-MAX_HISTORY);
-  }
+  // Load recent conversation history from DB
+  const recentMessages = await prisma.message.findMany({
+    where: { phone: userPhone },
+    orderBy: { createdAt: 'asc' },
+    take: MAX_HISTORY,
+  });
+
+  const history = recentMessages.map(m => ({ role: m.role, content: m.content }));
 
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -195,7 +202,7 @@ app.post('/sms', async (req, res) => {
         model: 'claude-sonnet-4-5',
         max_tokens: 1000,
         system: COLLIN_SYSTEM_PROMPT,
-        messages: conversations[userPhone],
+        messages: history,
       }),
     });
 
@@ -207,8 +214,10 @@ app.post('/sms', async (req, res) => {
 
     const reply = data.content[0].text;
 
-    // Add Collin's reply to history
-    conversations[userPhone].push({ role: 'assistant', content: reply });
+    // Save Collin's reply to DB
+    await prisma.message.create({
+      data: { phone: userPhone, role: 'assistant', content: reply },
+    });
 
     // SMS has a 1600 char limit — split if needed
     const chunks = reply.length <= 1600 ? [reply] : splitMessage(reply, 1580);
