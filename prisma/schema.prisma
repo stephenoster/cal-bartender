@@ -7,11 +7,20 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  phone     String   @unique
-  cabinet   String?  // JSON string of parsed cabinet inventory from photo
-  prefs     String?  // JSON string of user preferences
-  createdAt DateTime @default(now())
+  id             Int      @id @default(autoincrement())
+  phone          String   @unique
+  name           String?
+  cabinet        String?  // JSON: { tier, label }
+  prefs          String?  // JSON: { palate }
+  onboarded      Boolean  @default(false)
+  onboardingStep Int      @default(0)
+  // 0 = normal flow
+  // 1 = closing line sent after recipe, waiting for pick response
+  // 2 = asked name, waiting
+  // 3 = asked bar tier, waiting
+  // 4 = asked palate, waiting
+  // on complete → onboarded=true, step=0
+  createdAt      DateTime @default(now())
 
   messages  Message[]
 }
