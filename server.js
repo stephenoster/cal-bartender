@@ -1,6 +1,41 @@
 const express = require('express');
 const path = require('path');
 const twilio = require('twilio');
+const pool = require('./db');
+
+async function initDb() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      phone_number      TEXT PRIMARY KEY,
+      name              TEXT,
+      bar_type          TEXT,
+      favorite_drink    TEXT,
+      city              TEXT,
+      timezone          TEXT,
+      onboarding_done   BOOLEAN DEFAULT false,
+      last_contacted    TIMESTAMP,
+      created_at        TIMESTAMP DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS recipes (
+      id              SERIAL PRIMARY KEY,
+      phone_number    TEXT REFERENCES users(phone_number),
+      drink_name      TEXT,
+      made_at         TIMESTAMP DEFAULT now(),
+      followup_sent   BOOLEAN DEFAULT false,
+      followup_at     TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS conversations (
+      id              SERIAL PRIMARY KEY,
+      phone_number    TEXT REFERENCES users(phone_number),
+      role            TEXT,
+      content         TEXT,
+      created_at      TIMESTAMP DEFAULT now()
+    );
+  `);
+  console.log('Database ready');
+}
 
 const app = express();
 app.use(express.json());
@@ -338,4 +373,11 @@ function splitMessage(text, maxLength) {
 }
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Collin running on port ${PORT}`));
+initDb()
+  .then(() => {
+    app.listen(PORT, () => console.log(`Collin running on port ${PORT}`));
+  })
+  .catch(err => {
+    console.error('Database init failed:', err);
+    process.exit(1);
+  });
