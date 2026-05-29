@@ -480,9 +480,6 @@
 <script>
 let history = [];
 let chatStarted = false;
-let onboardingState = null; // null | 'prompted' | 'name' | 'bar' | 'palate' | 'done'
-let onboardingTimer = null;
-let userName = null;
 
 const openings = [
     "What can I get you?",
@@ -565,90 +562,9 @@ function showTyping() {
     return row;
 }
 
-function handleOnboardingReply(text) {
-    const lower = text.toLowerCase().trim();
-
-    if (onboardingState === 'prompted') {
-        const affirmative = ['yes', 'yeah', 'yep', 'sure', 'ok', 'okay', 'y', 'yup', 'absolutely', 'let\'s go', 'lets go', 'go ahead', 'hit me'];
-        if (affirmative.some(a => lower.includes(a))) {
-            onboardingState = 'name';
-            setTimeout(() => {
-                const msg = "What's your name?";
-                addBubble(msg, 'collin');
-                history.push({ role: 'assistant', content: msg });
-            }, 800);
-        } else {
-            onboardingState = 'done';
-            setTimeout(() => {
-                const msg = "No worries. Next time then.";
-                addBubble(msg, 'collin');
-                history.push({ role: 'assistant', content: msg });
-            }, 800);
-        }
-        return true;
-    }
-
-    if (onboardingState === 'name') {
-        userName = text.trim();
-        onboardingState = 'bar';
-        setTimeout(() => {
-            const msg = `${userName}. Got it. What kinda bar are we working with?\n\nA. Japanese whisky, small-batch amaro, Luxardo cherries, perfect clear ice\nB. Good bourbon, decent tequila, real bitters, cold vermouth, fresh citrus always\nC. Solid well spirits, a few interesting bottles, building the collection\nD. Whatever looked good at the store — kind of a mess but there's good stuff in there`;
-            addBubble(msg, 'collin');
-            history.push({ role: 'assistant', content: msg });
-        }, 800);
-        return true;
-    }
-
-    if (onboardingState === 'bar') {
-        onboardingState = 'palate';
-        setTimeout(() => {
-            const msg = "Last one — how do you usually drink? Strong and stirred, or something with citrus and life to it?";
-            addBubble(msg, 'collin');
-            history.push({ role: 'assistant', content: msg });
-        }, 800);
-        return true;
-    }
-
-    if (onboardingState === 'palate') {
-        onboardingState = 'done';
-        setTimeout(() => {
-            const msg = "Got it. I'll remember all that. Next time you text me I'll already know your bar.";
-            addBubble(msg, 'collin');
-            history.push({ role: 'assistant', content: msg });
-        }, 800);
-        return true;
-    }
-
-    return false;
-}
-
-function scheduleOnboardingPrompt() {
-    if (onboardingTimer) clearTimeout(onboardingTimer);
-    // 5 minutes — change to 5000 (5 seconds) for testing
-    onboardingTimer = setTimeout(() => {
-        if (onboardingState !== null) return; // already started
-        onboardingState = 'prompted';
-        const msg = "Hey real quick, I want to save your bar so next time I'm not starting from scratch. Just three questions. You in?";
-        addBubble(msg, 'collin');
-        history.push({ role: 'assistant', content: msg });
-    }, 5000);
-}
-
 async function send() {
     const text = messageInput.value.trim();
     if (!text) return;
-
-    // If we're mid-onboarding, handle it locally — don't call the API
-    if (onboardingState && onboardingState !== 'done') {
-        addBubble(text, 'user');
-        messageInput.value = '';
-        messageInput.style.height = 'auto';
-        sendBtn.disabled = true;
-        handleOnboardingReply(text);
-        sendBtn.disabled = false;
-        messageInput.focus();
-        return;
-    }
 
     addBubble(text, 'user');
     history.push({ role: 'user', content: text });
@@ -673,12 +589,6 @@ async function send() {
         let reply = data.content?.find(b => b.type === 'text')?.text
             || "Hey. Something went sideways on my end — try again?";
 
-        // Detect and strip [RECIPE] marker
-        if (reply.includes('[RECIPE]')) {
-            reply = reply.replace('[RECIPE]', '').trimEnd();
-            scheduleOnboardingPrompt();
-        }
-
         history.push({ role: 'assistant', content: reply });
 
         const paragraphs = reply.split(/\n\n+/).filter(p => p.trim());
@@ -699,10 +609,6 @@ async function send() {
 function reset() {
     history = [];
     chatStarted = false;
-    onboardingState = null;
-    onboardingTimer && clearTimeout(onboardingTimer);
-    onboardingTimer = null;
-    userName = null;
     messagesArea.innerHTML = '<div class="time-label">Today</div>';
     chatStarted = true;
     showOpeningMessage();
