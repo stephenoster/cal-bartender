@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Collin Thomas</title>
+<title>Collin Thomas — Craft Bartender</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400&display=swap');
 
@@ -11,69 +11,50 @@
 
   :root {
     --gunmetal: #32373B;
-    --iron-grey: #4A5859;
+    --iron: #4A5859;
     --almond: #F4D6CC;
     --honey: #F4B860;
     --brick: #C83E4D;
     --dark: #1e2224;
-    --bubble-in: #e9e9eb;
-    --bubble-out: #007aff;
   }
 
   html, body {
-    height: 100%;
+    min-height: 100%;
     width: 100%;
-    overflow: hidden;
-    background: var(--dark);
+    background: var(--gunmetal);
     font-family: 'DM Sans', sans-serif;
     color: var(--almond);
-  }
-
-  .screen {
-    position: fixed;
-    inset: 0;
     display: flex;
     flex-direction: column;
-    transition: opacity 0.35s ease, transform 0.35s ease;
-  }
-
-  .screen.hidden {
-    opacity: 0;
-    pointer-events: none;
-    transform: translateY(20px);
-  }
-
-  /* ── LANDING ── */
-  #landing {
     align-items: center;
     justify-content: center;
-    background: var(--gunmetal);
-    padding: 2.5rem 2rem;
   }
 
-  /* subtle top bar accent */
-  #landing::before {
+  /* top accent */
+  body::before {
     content: '';
-    position: absolute;
+    position: fixed;
     top: 0; left: 0; right: 0;
     height: 3px;
     background: linear-gradient(90deg, var(--brick), var(--honey));
+    z-index: 10;
   }
 
-  .landing-inner {
+  .wrap {
     display: flex;
     flex-direction: column;
     align-items: center;
-    max-width: 340px;
     width: 100%;
+    max-width: 360px;
+    padding: 3rem 2rem 3rem;
   }
 
   /* Avatar */
   .avatar-wrap {
     position: relative;
-    width: 120px;
-    height: 120px;
-    margin-bottom: 1.5rem;
+    width: 110px;
+    height: 110px;
+    margin-bottom: 1.4rem;
   }
 
   .avatar-ring {
@@ -81,17 +62,14 @@
     inset: -3px;
     border-radius: 50%;
     background: linear-gradient(135deg, var(--honey), var(--brick));
-    padding: 3px;
   }
 
   .avatar-circle {
-    width: 120px;
-    height: 120px;
+    position: absolute;
+    inset: 3px;
     border-radius: 50%;
     overflow: hidden;
     border: 3px solid var(--gunmetal);
-    position: relative;
-    z-index: 1;
   }
 
   .avatar-circle img {
@@ -101,52 +79,107 @@
     object-position: center top;
   }
 
-  /* Text */
   .name {
     font-family: 'Playfair Display', serif;
-    font-size: 2rem;
+    font-size: 1.9rem;
     font-weight: 600;
     color: #fff;
     letter-spacing: -0.02em;
     text-align: center;
-    margin-bottom: 0.3rem;
+    margin-bottom: 0.25rem;
   }
 
   .title {
     font-family: 'DM Mono', monospace;
-    font-size: 0.62rem;
+    font-size: 0.6rem;
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--honey);
     text-align: center;
-    margin-bottom: 1.75rem;
+    margin-bottom: 1.5rem;
   }
 
   .divider {
     width: 40px;
     height: 1px;
     background: linear-gradient(90deg, transparent, rgba(244,184,96,0.4), transparent);
-    margin: 0 auto 1.75rem;
+    margin: 0 auto 1.5rem;
   }
 
   .bio {
     font-size: 0.95rem;
-    line-height: 1.7;
+    line-height: 1.75;
     color: rgba(244,214,204,0.65);
     text-align: center;
     font-weight: 300;
-    letter-spacing: 0.01em;
-    margin-bottom: 2.5rem;
-    max-width: 260px;
+    margin-bottom: 2rem;
+    max-width: 280px;
   }
 
-  .cta-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
+  /* Form */
+  .form-wrap {
     width: 100%;
-    max-width: 260px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 1rem;
+  }
+
+  .phone-input {
+    width: 100%;
+    padding: 15px 18px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(244,214,204,0.2);
+    border-radius: 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 1.05rem;
+    color: var(--almond);
+    letter-spacing: 0.05em;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+
+  .phone-input::placeholder {
+    color: rgba(244,214,204,0.3);
+    letter-spacing: 0.05em;
+  }
+
+  .phone-input:focus {
+    border-color: rgba(244,184,96,0.5);
+  }
+
+  .consent-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 2px 0;
+  }
+
+  .consent-checkbox {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    accent-color: var(--honey);
+    cursor: pointer;
+  }
+
+  .consent-label {
+    font-size: 0.75rem;
+    line-height: 1.6;
+    color: rgba(244,214,204,0.6);
+    cursor: pointer;
+  }
+
+  .consent-label a {
+    color: rgba(244,214,204,0.75);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .submit-btn {
+    width: 100%;
     padding: 16px 24px;
     background: var(--honey);
     color: var(--gunmetal);
@@ -157,462 +190,195 @@
     font-weight: 500;
     letter-spacing: 0.01em;
     cursor: pointer;
-    transition: background 0.2s, transform 0.1s;
+    transition: background 0.2s, transform 0.1s, opacity 0.2s;
     -webkit-appearance: none;
-    margin-bottom: 1rem;
   }
 
-  .cta-phone {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.72rem;
-    color: rgba(244,214,204,0.45);
-    text-align: center;
-    letter-spacing: 0.08em;
-    margin-bottom: 0.6rem;
+  .submit-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
   }
 
-  .cta-disclosure {
-    font-size: 0.65rem;
-    color: rgba(244,214,204,0.3);
-    text-align: center;
-    line-height: 1.6;
-    max-width: 260px;
-    letter-spacing: 0.01em;
-  }
-
-  .cta-disclosure a {
-    color: rgba(244,214,204,0.4);
-    text-decoration: underline;
-    text-underline-offset: 2px;
-  }
-
-  .cta-btn:active {
+  .submit-btn:not(:disabled):active {
     background: var(--almond);
     transform: scale(0.97);
   }
 
-  /* ── CHAT ── */
-  #chat {
-    background: #fff;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .chat-header {
-    background: #f2f2f7;
-    padding: env(safe-area-inset-top, 44px) 16px 12px;
-    display: flex;
+  /* Success state */
+  .success {
+    display: none;
     flex-direction: column;
     align-items: center;
-    border-bottom: 0.5px solid rgba(0,0,0,0.12);
-    flex-shrink: 0;
-    position: relative;
-  }
-
-  /* top accent strip on chat header */
-  .chat-header::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, var(--brick), var(--honey));
-  }
-
-  .chat-back {
-    position: absolute;
-    left: 16px;
-    top: calc(env(safe-area-inset-top, 44px) + 10px);
-    background: none;
-    border: none;
-    color: #007aff;
-    font-size: 0.95rem;
-    font-family: 'DM Sans', sans-serif;
-    cursor: pointer;
-    padding: 4px 0;
-    display: flex;
-    align-items: center;
-    gap: 2px;
-  }
-
-  .chat-avatar {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    overflow: hidden;
-    margin-bottom: 4px;
-    border: 2px solid var(--honey);
-  }
-
-  .chat-avatar img {
+    gap: 10px;
+    padding: 1.5rem;
+    background: rgba(244,184,96,0.08);
+    border: 1px solid rgba(244,184,96,0.2);
+    border-radius: 12px;
     width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center top;
   }
 
-  .chat-name {
+  .success.visible { display: flex; }
+
+  .success-icon {
+    font-size: 1.8rem;
+  }
+
+  .success-text {
     font-size: 0.95rem;
-    font-weight: 600;
-    color: #000;
-    letter-spacing: -0.2px;
+    color: rgba(244,214,204,0.8);
+    text-align: center;
+    line-height: 1.6;
   }
 
-  .chat-subtitle {
-    font-size: 0.72rem;
-    color: #8a8a8e;
-    margin-top: 1px;
+  /* Error */
+  .error-msg {
+    display: none;
+    font-size: 0.8rem;
+    color: var(--brick);
+    text-align: center;
+  }
+
+  .error-msg.visible { display: block; }
+
+  .field-label {
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(244,214,204,0.45);
     font-family: 'DM Mono', monospace;
+    margin-bottom: -4px;
+  }
+
+  /* Footer */
+  .footer-links {
+    margin-top: 1.75rem;
+    font-size: 0.7rem;
+    color: rgba(244,214,204,0.25);
+    text-align: center;
     letter-spacing: 0.04em;
   }
 
-  .messages-area {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 16px 12px 8px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    -webkit-overflow-scrolling: touch;
+  .footer-links a {
+    color: rgba(244,214,204,0.3);
+    text-decoration: none;
   }
 
-  .messages-area::-webkit-scrollbar { display: none; }
-
-  .time-label {
-    text-align: center;
-    font-size: 11px;
-    color: #8a8a8e;
-    margin: 4px 0 8px;
-    letter-spacing: 0.02em;
-  }
-
-  .bubble-row { display: flex; margin-bottom: 2px; }
-  .bubble-row.user { justify-content: flex-end; }
-  .bubble-row.collin { justify-content: flex-start; }
-
-  .bubble {
-    max-width: 75%;
-    padding: 10px 14px;
-    border-radius: 18px;
-    font-size: 15px;
-    line-height: 1.45;
-    letter-spacing: -0.1px;
-    white-space: pre-wrap;
-    word-break: break-word;
-  }
-
-  .bubble.user {
-    background: var(--bubble-out);
-    color: #fff;
-    border-bottom-right-radius: 4px;
-  }
-
-  .bubble.collin {
-    background: var(--bubble-in);
-    color: #000;
-    border-bottom-left-radius: 4px;
-  }
-
-  .typing-indicator {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 10px 14px;
-    background: var(--bubble-in);
-    border-radius: 18px;
-    border-bottom-left-radius: 4px;
-    width: fit-content;
-  }
-
-  .dot {
-    width: 7px; height: 7px;
-    background: #888;
-    border-radius: 50%;
-    animation: bounce 1.2s infinite;
-  }
-  .dot:nth-child(2) { animation-delay: 0.15s; }
-  .dot:nth-child(3) { animation-delay: 0.3s; }
-
-  @keyframes bounce {
-    0%, 60%, 100% { transform: translateY(0); }
-    30% { transform: translateY(-5px); }
-  }
-
-  .input-area {
-    background: #f2f2f7;
-    border-top: 0.5px solid rgba(0,0,0,0.12);
-    padding: 10px 12px;
-    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
-    display: flex;
-    align-items: flex-end;
-    gap: 8px;
-    flex-shrink: 0;
-  }
-
-  .input-wrap {
-    flex: 1;
-    background: #fff;
-    border: 0.5px solid rgba(0,0,0,0.18);
-    border-radius: 20px;
-    display: flex;
-    align-items: center;
-    padding: 8px 14px;
-    min-height: 36px;
-  }
-
-  .message-input {
-    flex: 1;
-    border: none;
-    outline: none;
-    font-size: 16px;
-    font-family: inherit;
-    background: transparent;
-    color: #000;
-    resize: none;
-    max-height: 100px;
-    line-height: 1.4;
-  }
-
-  .send-btn {
-    width: 32px; height: 32px;
-    background: var(--bubble-out);
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: opacity 0.15s, transform 0.1s;
-    flex-shrink: 0;
-    -webkit-appearance: none;
-  }
-
-  .send-btn:disabled { opacity: 0.4; }
-  .send-btn:not(:disabled):active { transform: scale(0.92); }
-  .send-icon { width: 16px; height: 16px; fill: #fff; }
-
-  .reset-wrap {
-    text-align: center;
-    padding: 6px 0 2px;
-    flex-shrink: 0;
-    background: #f2f2f7;
-  }
-
-  .reset-btn {
-    background: none;
-    border: none;
-    color: #8a8a8e;
-    font-size: 12px;
-    font-family: 'DM Mono', monospace;
-    cursor: pointer;
-    letter-spacing: 0.04em;
-    padding: 4px 8px;
-  }
+  .footer-links a:hover { color: rgba(244,214,204,0.5); }
 </style>
 </head>
 <body>
 
-<!-- LANDING -->
-<div class="screen" id="landing">
-  <div class="landing-inner">
+<div class="wrap">
 
-    <div class="avatar-wrap">
-      <div class="avatar-ring"></div>
-      <div class="avatar-circle">
-        <img src="collin.jpg" alt="Collin Thomas">
-      </div>
-    </div>
-
-    <div class="name">Collin Thomas</div>
-    <div class="title">Your Craft Bartender</div>
-    <div class="divider"></div>
-    <div class="bio">Twenty years behind the bar. He knows what to make and exactly how to make it.</div>
-
-    <button class="cta-btn" id="startBtn">
-      💬&nbsp; Text Collin
-    </button>
-
-    <div class="cta-phone">(980) 655-4171</div>
-    <div class="cta-disclosure">
-      By texting this number you agree to receive SMS messages from Collin Thomas.
-      Msg &amp; data rates may apply. Reply STOP to opt out. &nbsp;·&nbsp;
-      <a href="/privacy.html">Privacy</a> &nbsp;·&nbsp; <a href="/terms.html">Terms</a>
-    </div>
-
-  </div>
-</div>
-
-<!-- CHAT -->
-<div class="screen hidden" id="chat">
-  <div class="chat-header">
-    <button class="chat-back" id="backBtn">‹ Back</button>
-    <div class="chat-avatar">
+  <div class="avatar-wrap">
+    <div class="avatar-ring"></div>
+    <div class="avatar-circle">
       <img src="collin.jpg" alt="Collin Thomas">
     </div>
-    <div class="chat-name">Collin Thomas</div>
-    <div class="chat-subtitle">craft bartender</div>
   </div>
 
-  <div class="messages-area" id="messagesArea">
-    <div class="time-label">Today</div>
-  </div>
+  <div class="name">Collin Thomas</div>
+  <div class="title">Your Craft Bartender</div>
+  <div class="divider"></div>
+  <div class="bio">Twenty years behind the bar. Tell him what you're working with — a spirit, a vibe, an occasion — and he'll find something worth making.</div>
 
-  <div class="input-area">
-    <div class="input-wrap">
-      <textarea
-        class="message-input"
-        id="messageInput"
-        placeholder="iMessage"
-        rows="1"
-      ></textarea>
+  <div class="form-wrap" id="formWrap">
+
+    <div class="field-label">Your phone number</div>
+    <input
+      type="tel"
+      class="phone-input"
+      id="phoneInput"
+      placeholder="(555) 000-0000"
+      maxlength="14"
+      inputmode="tel"
+      autocomplete="tel"
+    />
+
+    <div class="consent-row">
+      <input type="checkbox" class="consent-checkbox" id="consentBox" />
+      <label class="consent-label" for="consentBox">
+        I agree to receive SMS messages from Collin Thomas. Msg &amp; data rates may apply.
+        Reply STOP to opt out, HELP for help. &nbsp;
+        <a href="/privacy.html" target="_blank">Privacy Policy</a> &nbsp;·&nbsp;
+        <a href="/terms.html" target="_blank">Terms</a>
+      </label>
     </div>
-    <button class="send-btn" id="sendBtn" disabled>
-      <svg class="send-icon" viewBox="0 0 16 16">
-        <path d="M8 2l6 6H9v6H7V8H2z"/>
-      </svg>
-    </button>
+
+    <button class="submit-btn" id="submitBtn" disabled>Text Collin 🥃</button>
+
+    <div class="error-msg" id="errorMsg">Something went wrong — try again in a moment.</div>
+
   </div>
-  <div class="reset-wrap">
-    <button class="reset-btn" id="resetBtn">reset conversation</button>
+
+  <div class="success" id="successMsg">
+    <div class="success-icon">🥃</div>
+    <div class="success-text">I'll text you shortly.</div>
   </div>
+
+  <div class="footer-links">
+    © 2026 Collin Thomas &nbsp;·&nbsp;
+    <a href="/privacy.html">Privacy</a> &nbsp;·&nbsp;
+    <a href="/terms.html">Terms</a>
+  </div>
+
 </div>
 
 <script>
-let history = [];
-let chatStarted = false;
+const phoneInput = document.getElementById('phoneInput');
+const consentBox = document.getElementById('consentBox');
+const submitBtn  = document.getElementById('submitBtn');
+const formWrap   = document.getElementById('formWrap');
+const successMsg = document.getElementById('successMsg');
+const errorMsg   = document.getElementById('errorMsg');
 
-const openings = [
-    "What can I get you?",
-    "Hey, what can I get ya?",
-    "What'll it be?",
-    "What are we drinking?",
-    "What are you looking for?",
-    "What kind of mood are you in?",
-    "What are we making?",
-];
+function formatPhone(val) {
+  const digits = val.replace(/\D/g, '').slice(0, 10);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `(${digits.slice(0,3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
+}
 
-const landing    = document.getElementById('landing');
-const chatScreen = document.getElementById('chat');
-const startBtn   = document.getElementById('startBtn');
-const backBtn    = document.getElementById('backBtn');
-const messagesArea = document.getElementById('messagesArea');
-const messageInput = document.getElementById('messageInput');
-const sendBtn    = document.getElementById('sendBtn');
-const resetBtn   = document.getElementById('resetBtn');
+function checkReady() {
+  const digits = phoneInput.value.replace(/\D/g, '');
+  submitBtn.disabled = !(digits.length === 10 && consentBox.checked);
+}
 
-startBtn.addEventListener('click', () => {
-    landing.classList.add('hidden');
-    chatScreen.classList.remove('hidden');
-    if (!chatStarted) {
-        chatStarted = true;
-        showOpeningMessage();
-    }
-    setTimeout(() => messageInput.focus(), 400);
+phoneInput.addEventListener('input', function() {
+  const pos = this.selectionStart;
+  const raw = this.value.replace(/\D/g, '');
+  this.value = formatPhone(raw);
+  checkReady();
 });
 
-backBtn.addEventListener('click', () => {
-    chatScreen.classList.add('hidden');
-    landing.classList.remove('hidden');
+consentBox.addEventListener('change', checkReady);
+
+submitBtn.addEventListener('click', async () => {
+  const digits = phoneInput.value.replace(/\D/g, '');
+  const phone = `+1${digits}`;
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Sending...';
+  errorMsg.classList.remove('visible');
+
+  try {
+    const res = await fetch('/join', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone })
+    });
+
+    if (!res.ok) throw new Error('server error');
+
+    formWrap.style.display = 'none';
+    successMsg.classList.add('visible');
+
+  } catch (err) {
+    errorMsg.classList.add('visible');
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Text Collin 🥃';
+  }
 });
-
-function showOpeningMessage() {
-    const msg = openings[Math.floor(Math.random() * openings.length)];
-    setTimeout(() => {
-        addBubble(msg, 'collin');
-        history.push({ role: 'assistant', content: msg });
-    }, 600);
-}
-
-messageInput.addEventListener('input', function() {
-    this.style.height = 'auto';
-    this.style.height = Math.min(this.scrollHeight, 100) + 'px';
-    sendBtn.disabled = this.value.trim() === '';
-});
-
-messageInput.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        if (!sendBtn.disabled) send();
-    }
-});
-
-sendBtn.addEventListener('click', send);
-resetBtn.addEventListener('click', reset);
-
-function addBubble(text, role) {
-    const row = document.createElement('div');
-    row.className = `bubble-row ${role}`;
-    const bubble = document.createElement('div');
-    bubble.className = `bubble ${role}`;
-    bubble.textContent = text;
-    row.appendChild(bubble);
-    messagesArea.appendChild(row);
-    messagesArea.scrollTop = messagesArea.scrollHeight;
-}
-
-function showTyping() {
-    const row = document.createElement('div');
-    row.className = 'bubble-row collin';
-    const ind = document.createElement('div');
-    ind.className = 'typing-indicator';
-    ind.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
-    row.appendChild(ind);
-    messagesArea.appendChild(row);
-    messagesArea.scrollTop = messagesArea.scrollHeight;
-    return row;
-}
-
-async function send() {
-    const text = messageInput.value.trim();
-    if (!text) return;
-
-    addBubble(text, 'user');
-    history.push({ role: 'user', content: text });
-
-    messageInput.value = '';
-    messageInput.style.height = 'auto';
-    sendBtn.disabled = true;
-    messageInput.disabled = true;
-
-    const typingRow = showTyping();
-
-    try {
-        const res = await fetch('/api/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ messages: history })
-        });
-
-        const data = await res.json();
-        typingRow.remove();
-
-        let reply = data.content?.find(b => b.type === 'text')?.text
-            || "Hey. Something went sideways on my end — try again?";
-
-        history.push({ role: 'assistant', content: reply });
-
-        const paragraphs = reply.split(/\n\n+/).filter(p => p.trim());
-        for (let i = 0; i < paragraphs.length; i++) {
-            if (i > 0) await new Promise(r => setTimeout(r, 350));
-            addBubble(paragraphs[i].trim(), 'collin');
-        }
-
-    } catch (err) {
-        typingRow.remove();
-        addBubble("Hey. Something went sideways on my end — try again?", 'collin');
-    }
-
-    messageInput.disabled = false;
-    messageInput.focus();
-}
-
-function reset() {
-    history = [];
-    chatStarted = false;
-    messagesArea.innerHTML = '<div class="time-label">Today</div>';
-    chatStarted = true;
-    showOpeningMessage();
-}
 </script>
 </body>
 </html>
