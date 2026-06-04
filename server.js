@@ -360,6 +360,36 @@ function splitMessage(text, maxLength) {
   if (current) chunks.push(current);
   return chunks;
 }
+// ── Web opt-in form endpoint ────────────────────────────────────────────────
+app.post('/join', async (req, res) => {
+  const { phone } = req.body;
+
+  if (!phone || !/^\+1\d{10}$/.test(phone)) {
+    return res.status(400).json({ error: 'invalid phone number' });
+  }
+
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken  = process.env.TWILIO_AUTH_TOKEN;
+
+  if (!accountSid || !authToken) {
+    return res.status(500).json({ error: 'missing credentials' });
+  }
+
+  const client = twilio(accountSid, authToken);
+
+  try {
+    await client.messages.create({
+      body: "Hey, I'm Collin. Here you need a mixologist. What can I get ya?\n\nMsg & data rates may apply. Reply STOP to opt out, HELP for help.",
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: phone,
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Error sending welcome SMS:', err);
+    res.status(500).json({ error: 'failed to send' });
+  }
+});
 
 const PORT = process.env.PORT || 3000;
 initDb()
