@@ -264,6 +264,28 @@
   }
 
   .footer-links a:hover { color: rgba(244,214,204,0.5); }
+
+  .browser-link {
+    display: block;
+    width: 100%;
+    padding: 16px 24px;
+    background: transparent;
+    color: var(--almond);
+    border: 1px solid rgba(244,214,204,0.2);
+    border-radius: 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    text-align: center;
+    text-decoration: none;
+    transition: border-color 0.2s, color 0.2s;
+  }
+
+  .browser-link:hover {
+    border-color: rgba(244,214,204,0.4);
+    color: #fff;
+  }
 </style>
 </head>
 <body>
@@ -298,14 +320,15 @@
     <div class="consent-row">
       <input type="checkbox" class="consent-checkbox" id="consentBox" />
       <label class="consent-label" for="consentBox">
-        I agree to receive SMS messages from Collin Thomas. Msg &amp; data rates may apply.
-        Reply STOP to opt out, HELP for help. &nbsp;
+        I agree to receive drink recommendations and related conversational messages via SMS from Collin Thomas. Message and data rates may apply. Reply STOP to unsubscribe, HELP for help. No mobile data will be shared with third parties for marketing purposes. &nbsp;
         <a href="/privacy.html" target="_blank">Privacy Policy</a> &nbsp;·&nbsp;
         <a href="/terms.html" target="_blank">Terms</a>
       </label>
     </div>
 
     <button class="submit-btn" id="submitBtn" disabled>Text Collin 🥃</button>
+
+    <a href="/collin.html" class="browser-link">Chat in browser</a>
 
     <div class="error-msg" id="errorMsg">Something went wrong — try again in a moment.</div>
 
