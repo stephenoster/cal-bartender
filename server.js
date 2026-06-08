@@ -40,6 +40,16 @@ async function initDb() {
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Redirect .com to .bar
+app.use((req, res, next) => {
+  const host = req.headers.host;
+  if (host && host.includes('collinthomasbar.com')) {
+    return res.redirect(301, `https://collinthomas.bar${req.url}`);
+  }
+  next();
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // In-memory conversation store (phone number → message history)
