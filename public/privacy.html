@@ -4,29 +4,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Privacy Policy — Collin Thomas</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
   <style>
-    :root {
-      --gunmetal: #32373B;
-      --iron: #4A5859;
-      --almond: #F4D6CC;
-      --honey: #F4B860;
-      --brick: #C83E4D;
-      --off-white: #F9F4F0;
-    }
-
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      background-color: var(--gunmetal);
-      color: var(--almond);
-      font-family: 'DM Sans', sans-serif;
-      font-weight: 300;
+      background: #F5F3EE;
+      color: #1A1916;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-weight: 400;
       min-height: 100vh;
     }
 
     header {
-      border-bottom: 1px solid rgba(244, 214, 204, 0.15);
+      border-bottom: 1px solid #C8C4BC;
       padding: 24px 40px;
       display: flex;
       align-items: center;
@@ -34,78 +24,79 @@
     }
 
     .wordmark {
-      font-family: 'Playfair Display', serif;
-      font-size: 1.1rem;
-      color: var(--almond);
+      font-size: 13px;
+      font-weight: 400;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #1A1916;
       text-decoration: none;
-      letter-spacing: 0.02em;
     }
 
     .back-link {
-      font-size: 0.8rem;
-      color: var(--iron);
+      font-size: 11px;
+      color: #999690;
       text-decoration: none;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
       transition: color 0.2s;
     }
 
-    .back-link:hover { color: var(--honey); }
+    .back-link:hover { color: #1A1916; }
 
     main {
-      max-width: 680px;
+      max-width: 620px;
       margin: 0 auto;
       padding: 64px 40px 100px;
     }
 
     .doc-label {
-      font-size: 0.7rem;
-      letter-spacing: 0.14em;
+      font-size: 10px;
+      letter-spacing: 0.18em;
       text-transform: uppercase;
-      color: var(--honey);
-      margin-bottom: 16px;
-    }
-
-    h1 {
-      font-family: 'Playfair Display', serif;
-      font-size: 2.4rem;
-      font-weight: 600;
-      color: var(--off-white);
-      line-height: 1.2;
+      color: #999690;
       margin-bottom: 12px;
     }
 
-    .last-updated {
-      font-size: 0.78rem;
-      color: var(--iron);
-      margin-bottom: 56px;
-      letter-spacing: 0.03em;
+    h1 {
+      font-size: 28px;
+      font-weight: 300;
+      color: #1A1916;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      margin-bottom: 8px;
     }
 
-    .divider {
-      width: 40px;
-      height: 2px;
-      background: var(--brick);
-      margin-bottom: 56px;
+    .last-updated {
+      font-size: 11px;
+      color: #999690;
+      margin-bottom: 40px;
+      letter-spacing: 0.04em;
+    }
+
+    .rule {
+      width: 100%;
+      height: 1px;
+      background: #C8C4BC;
+      margin-bottom: 40px;
     }
 
     section {
-      margin-bottom: 44px;
+      margin-bottom: 40px;
     }
 
     h2 {
-      font-family: 'Playfair Display', serif;
-      font-size: 1.05rem;
-      font-weight: 600;
-      color: var(--honey);
-      margin-bottom: 14px;
-      letter-spacing: 0.01em;
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #999690;
+      margin-bottom: 12px;
     }
 
     p {
-      font-size: 0.95rem;
+      font-size: 13px;
       line-height: 1.8;
-      color: rgba(244, 214, 204, 0.8);
+      color: #6B6860;
       margin-bottom: 12px;
     }
 
@@ -116,42 +107,50 @@
     }
 
     ul li {
-      font-size: 0.95rem;
+      font-size: 13px;
       line-height: 1.8;
-      color: rgba(244, 214, 204, 0.8);
-      padding-left: 20px;
+      color: #6B6860;
+      padding-left: 16px;
       position: relative;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
 
     ul li::before {
       content: '—';
       position: absolute;
       left: 0;
-      color: var(--brick);
+      color: #C8C4BC;
     }
 
     strong {
-      color: var(--almond);
+      color: #1A1916;
       font-weight: 500;
     }
 
     footer {
-      border-top: 1px solid rgba(244, 214, 204, 0.1);
-      padding: 32px 40px;
+      border-top: 1px solid #C8C4BC;
+      padding: 24px 40px;
       text-align: center;
     }
 
     footer p {
-      font-size: 0.75rem;
-      color: var(--iron);
+      font-size: 10px;
+      color: #C8C4BC;
+      letter-spacing: 0.06em;
       margin: 0;
     }
+
+    footer a {
+      color: #C8C4BC;
+      text-decoration: none;
+    }
+
+    footer a:hover { color: #999690; }
 
     @media (max-width: 600px) {
       header { padding: 20px 24px; }
       main { padding: 48px 24px 80px; }
-      h1 { font-size: 1.9rem; }
+      h1 { font-size: 22px; }
       footer { padding: 24px; }
     }
   </style>
@@ -167,7 +166,7 @@
     <div class="doc-label">Legal</div>
     <h1>Privacy Policy</h1>
     <p class="last-updated">Last updated: May 25, 2026</p>
-    <div class="divider"></div>
+    <div class="rule"></div>
 
     <section>
       <p>Collin Thomas ("the Service") is operated as a personal project. This policy explains how we handle information when you use our SMS-based cocktail recommendation service.</p>
@@ -185,7 +184,6 @@
     <section>
       <h2>How we use it</h2>
       <p>Your phone number is used solely to send you replies. Your message content — including text and any photos you send — is used to generate personalized cocktail recommendations. Conversation history may be stored persistently to provide continuity across sessions, remember your preferences, and improve recommendations over time.</p>
-      <p>We do not sell, share, or distribute your information to any other third party. No mobile information will be shared with third party/affiliates for marketing or promotional purposes.</p>
     </section>
 
     <section>
@@ -195,6 +193,7 @@
         <li><strong>Anthropic</strong> — AI processing of your messages and photos to generate recommendations</li>
         <li><strong>Twilio</strong> — SMS delivery and phone number management</li>
       </ul>
+      <p>We do not sell, share, or distribute your information to any other third party. No mobile opt-in data or phone numbers will be shared with third parties or affiliates for marketing or promotional purposes.</p>
     </section>
 
     <section>
@@ -215,7 +214,7 @@
   </main>
 
   <footer>
-    <p>© 2026 Collin Thomas &nbsp;·&nbsp; <a href="/terms.html" style="color: var(--iron); text-decoration: none;">Terms of Service</a></p>
+    <p>© 2026 Collin Thomas &nbsp;·&nbsp; <a href="/terms.html">Terms of Service</a></p>
   </footer>
 
 </body>

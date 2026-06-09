@@ -5,308 +5,281 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Collin Thomas — Craft Bartender</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400&display=swap');
 
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-
-  :root {
-    --gunmetal: #32373B;
-    --iron: #4A5859;
-    --almond: #F4D6CC;
-    --honey: #F4B860;
-    --brick: #C83E4D;
-    --dark: #1e2224;
-  }
 
   html, body {
     min-height: 100%;
     width: 100%;
-    background: var(--gunmetal);
-    font-family: 'DM Sans', sans-serif;
-    color: var(--almond);
+    background: #F5F3EE;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    color: #1A1916;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
   }
 
-  /* top accent */
-  body::before {
-    content: '';
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--brick), var(--honey));
-    z-index: 10;
-  }
-
   .wrap {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
     width: 100%;
     max-width: 360px;
-    padding: 3rem 2rem 3rem;
+    padding: 48px 32px 64px;
   }
 
-  /* Avatar */
-  .avatar-wrap {
-    position: relative;
-    width: 110px;
-    height: 110px;
-    margin-bottom: 1.4rem;
-  }
-
-  .avatar-ring {
-    position: absolute;
-    inset: -3px;
+  .avatar {
+    width: 72px;
+    height: 72px;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--honey), var(--brick));
-  }
-
-  .avatar-circle {
-    position: absolute;
-    inset: 3px;
-    border-radius: 50%;
+    background: #C8C4BC;
+    margin-bottom: 32px;
     overflow: hidden;
-    border: 3px solid var(--gunmetal);
+    flex-shrink: 0;
   }
 
-  .avatar-circle img {
+  .avatar img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     object-position: center top;
   }
 
-  .name {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.9rem;
-    font-weight: 600;
-    color: #fff;
-    letter-spacing: -0.02em;
-    text-align: center;
-    margin-bottom: 0.25rem;
-  }
-
-  .title {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.6rem;
-    letter-spacing: 0.2em;
+  .eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: var(--honey);
-    text-align: center;
-    margin-bottom: 1.5rem;
+    color: #999690;
+    margin-bottom: 8px;
+    font-weight: 400;
   }
 
-  .divider {
-    width: 40px;
+  .name {
+    font-size: 28px;
+    font-weight: 300;
+    color: #1A1916;
+    letter-spacing: -0.02em;
+    margin-bottom: 24px;
+    line-height: 1.1;
+  }
+
+  .rule {
+    width: 100%;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(244,184,96,0.4), transparent);
-    margin: 0 auto 1.5rem;
+    background: #C8C4BC;
+    margin-bottom: 24px;
+  }
+
+  .headline {
+    font-size: 13px;
+    font-weight: 500;
+    color: #1A1916;
+    letter-spacing: 0.01em;
+    margin-bottom: 12px;
+    line-height: 1.4;
   }
 
   .bio {
-    font-size: 0.95rem;
-    line-height: 1.75;
-    color: rgba(244,214,204,0.65);
-    text-align: center;
-    font-weight: 300;
-    margin-bottom: 2rem;
-    max-width: 280px;
+    font-size: 13px;
+    font-weight: 400;
+    color: #6B6860;
+    line-height: 1.7;
+    margin-bottom: 32px;
   }
 
-  /* Form */
   .form-wrap {
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    margin-bottom: 1rem;
+  }
+
+  .field-label {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #999690;
+    margin-bottom: 8px;
   }
 
   .phone-input {
     width: 100%;
-    padding: 15px 18px;
-    background: rgba(255,255,255,0.07);
-    border: 1px solid rgba(244,214,204,0.2);
-    border-radius: 12px;
-    font-family: 'DM Mono', monospace;
-    font-size: 1.05rem;
-    color: var(--almond);
-    letter-spacing: 0.05em;
+    padding: 12px 0;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid #C8C4BC;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 15px;
+    color: #1A1916;
     outline: none;
-    transition: border-color 0.2s;
+    margin-bottom: 24px;
+    letter-spacing: 0.04em;
     -webkit-appearance: none;
   }
 
-  .phone-input::placeholder {
-    color: rgba(244,214,204,0.3);
-    letter-spacing: 0.05em;
-  }
-
-  .phone-input:focus {
-    border-color: rgba(244,184,96,0.5);
-  }
+  .phone-input::placeholder { color: #C8C4BC; }
+  .phone-input:focus { border-bottom-color: #6B6860; }
 
   .consent-row {
     display: flex;
     align-items: flex-start;
     gap: 10px;
-    padding: 2px 0;
+    margin-bottom: 32px;
   }
 
   .consent-checkbox {
-    width: 18px;
-    height: 18px;
+    width: 14px;
+    height: 14px;
     flex-shrink: 0;
     margin-top: 2px;
-    accent-color: var(--honey);
+    border: 1px solid #C8C4BC;
+    background: transparent;
+    appearance: none;
+    -webkit-appearance: none;
     cursor: pointer;
+    position: relative;
+  }
+
+  .consent-checkbox:checked {
+    background: #1A1916;
+    border-color: #1A1916;
+  }
+
+  .consent-checkbox:checked::after {
+    content: '';
+    position: absolute;
+    left: 3px;
+    top: 1px;
+    width: 5px;
+    height: 8px;
+    border: 2px solid #F5F3EE;
+    border-top: none;
+    border-left: none;
+    transform: rotate(45deg);
   }
 
   .consent-label {
-    font-size: 0.75rem;
+    font-size: 11px;
+    color: #999690;
     line-height: 1.6;
-    color: rgba(244,214,204,0.6);
     cursor: pointer;
   }
 
   .consent-label a {
-    color: rgba(244,214,204,0.75);
+    color: #6B6860;
     text-decoration: underline;
     text-underline-offset: 2px;
   }
 
   .submit-btn {
     width: 100%;
-    padding: 16px 24px;
-    background: var(--honey);
-    color: var(--gunmetal);
+    padding: 14px 24px;
+    background: #1A1916;
+    color: #F5F3EE;
     border: none;
-    border-radius: 12px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 1rem;
-    font-weight: 500;
-    letter-spacing: 0.01em;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
     cursor: pointer;
-    transition: background 0.2s, transform 0.1s, opacity 0.2s;
+    margin-bottom: 12px;
+    transition: background 0.2s;
     -webkit-appearance: none;
   }
 
   .submit-btn:disabled {
-    opacity: 0.4;
+    background: #C8C4BC;
+    color: #F5F3EE;
     cursor: default;
   }
 
   .submit-btn:not(:disabled):active {
-    background: var(--almond);
-    transform: scale(0.97);
+    background: #3A3834;
   }
-
-  /* Success state */
-  .success {
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    padding: 1.5rem;
-    background: rgba(244,184,96,0.08);
-    border: 1px solid rgba(244,184,96,0.2);
-    border-radius: 12px;
-    width: 100%;
-  }
-
-  .success.visible { display: flex; }
-
-  .success-icon {
-    font-size: 1.8rem;
-  }
-
-  .success-text {
-    font-size: 0.95rem;
-    color: rgba(244,214,204,0.8);
-    text-align: center;
-    line-height: 1.6;
-  }
-
-  /* Error */
-  .error-msg {
-    display: none;
-    font-size: 0.8rem;
-    color: var(--brick);
-    text-align: center;
-  }
-
-  .error-msg.visible { display: block; }
-
-  .field-label {
-    font-size: 0.75rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: rgba(244,214,204,0.45);
-    font-family: 'DM Mono', monospace;
-    margin-bottom: -4px;
-  }
-
-  /* Footer */
-  .footer-links {
-    margin-top: 1.75rem;
-    font-size: 0.7rem;
-    color: rgba(244,214,204,0.25);
-    text-align: center;
-    letter-spacing: 0.04em;
-  }
-
-  .footer-links a {
-    color: rgba(244,214,204,0.3);
-    text-decoration: none;
-  }
-
-  .footer-links a:hover { color: rgba(244,214,204,0.5); }
 
   .browser-link {
     display: block;
     width: 100%;
-    padding: 16px 24px;
+    padding: 14px 24px;
     background: transparent;
-    color: var(--almond);
-    border: 1px solid rgba(244,214,204,0.2);
-    border-radius: 12px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 1rem;
-    font-weight: 500;
-    letter-spacing: 0.01em;
+    color: #6B6860;
+    border: 1px solid #C8C4BC;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
     text-align: center;
     text-decoration: none;
+    margin-bottom: 40px;
     transition: border-color 0.2s, color 0.2s;
   }
 
   .browser-link:hover {
-    border-color: rgba(244,214,204,0.4);
-    color: #fff;
+    border-color: #6B6860;
+    color: #1A1916;
   }
+
+  .error-msg {
+    display: none;
+    font-size: 11px;
+    color: #C05A3A;
+    margin-top: -24px;
+    margin-bottom: 16px;
+  }
+
+  .error-msg.visible { display: block; }
+
+  .success {
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    padding: 20px 0;
+  }
+
+  .success.visible { display: flex; }
+
+  .success-text {
+    font-size: 15px;
+    color: #1A1916;
+    font-weight: 300;
+    letter-spacing: 0.01em;
+  }
+
+  .footer-links {
+    font-size: 10px;
+    color: #C8C4BC;
+    letter-spacing: 0.06em;
+  }
+
+  .footer-links a {
+    color: #C8C4BC;
+    text-decoration: none;
+  }
+
+  .footer-links a:hover { color: #999690; }
 </style>
 </head>
 <body>
 
 <div class="wrap">
 
-  <div class="avatar-wrap">
-    <div class="avatar-ring"></div>
-    <div class="avatar-circle">
-      <img src="collin.jpg" alt="Collin Thomas">
-    </div>
+  <div class="avatar">
+    <img src="collin.jpg" alt="Collin Thomas">
   </div>
 
+  <div class="eyebrow">Craft Bartender</div>
   <div class="name">Collin Thomas</div>
-  <div class="title">Your Craft Bartender</div>
-  <div class="divider"></div>
-  <div class="bio">Twenty years behind the bar. Tell him what you're working with — a spirit, a vibe, an occasion — and he'll find something worth making.</div>
+  <div class="rule"></div>
+
+  <div class="headline">Your personal bartender, available by text.</div>
+  <div class="bio">Not a recipe database — more like a friend who's been bartending for twenty years and actually wants to talk about what you're making. Powered by AI, he knows the difference between a Toronto and a Black Manhattan, and when each one is right.</div>
 
   <div class="form-wrap" id="formWrap">
 
-    <div class="field-label">Your phone number (Optional)</div>
+    <div class="field-label">Your phone number</div>
     <input
       type="tel"
       class="phone-input"
@@ -326,8 +299,7 @@
       </label>
     </div>
 
-    <button class="submit-btn" id="submitBtn" disabled>Text Collin 🥃</button>
-
+    <button class="submit-btn" id="submitBtn" disabled>Text Collin</button>
     <a href="/collin.html" class="browser-link">Chat in browser</a>
 
     <div class="error-msg" id="errorMsg">Something went wrong — try again in a moment.</div>
@@ -335,7 +307,6 @@
   </div>
 
   <div class="success" id="successMsg">
-    <div class="success-icon">🥃</div>
     <div class="success-text">I'll text you shortly.</div>
   </div>
 
@@ -368,7 +339,6 @@ function checkReady() {
 }
 
 phoneInput.addEventListener('input', function() {
-  const pos = this.selectionStart;
   const raw = this.value.replace(/\D/g, '');
   this.value = formatPhone(raw);
   checkReady();
@@ -399,7 +369,7 @@ submitBtn.addEventListener('click', async () => {
   } catch (err) {
     errorMsg.classList.add('visible');
     submitBtn.disabled = false;
-    submitBtn.textContent = 'Text Collin 🥃';
+    submitBtn.textContent = 'Text Collin';
   }
 });
 </script>
