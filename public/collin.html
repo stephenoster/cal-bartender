@@ -5,17 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Collin Thomas</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400&display=swap');
-
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
   :root {
-    --gunmetal: #32373B;
-    --iron-grey: #4A5859;
-    --almond: #F4D6CC;
-    --honey: #F4B860;
-    --brick: #C83E4D;
-    --dark: #1e2224;
     --bubble-in: #e9e9eb;
     --bubble-out: #007aff;
   }
@@ -24,223 +16,44 @@
     height: 100%;
     width: 100%;
     overflow: hidden;
-    background: var(--dark);
-    font-family: 'DM Sans', sans-serif;
-    color: var(--almond);
+    background: #fff;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    color: #1A1916;
   }
 
-  .screen {
+  .chat-screen {
     position: fixed;
     inset: 0;
     display: flex;
     flex-direction: column;
-    transition: opacity 0.35s ease, transform 0.35s ease;
-  }
-
-  .screen.hidden {
-    opacity: 0;
-    pointer-events: none;
-    transform: translateY(20px);
-  }
-
-  /* ── LANDING ── */
-  #landing {
-    align-items: center;
-    justify-content: center;
-    background: var(--gunmetal);
-    padding: 2.5rem 2rem;
-  }
-
-  /* subtle top bar accent */
-  #landing::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--brick), var(--honey));
-  }
-
-  .landing-inner {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    max-width: 340px;
-    width: 100%;
-  }
-
-  /* Avatar */
-  .avatar-wrap {
-    position: relative;
-    width: 120px;
-    height: 120px;
-    margin-bottom: 1.5rem;
-  }
-
-  .avatar-ring {
-    position: absolute;
-    inset: -3px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--honey), var(--brick));
-    padding: 3px;
-  }
-
-  .avatar-circle {
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    overflow: hidden;
-    border: 3px solid var(--gunmetal);
-    position: relative;
-    z-index: 1;
-  }
-
-  .avatar-circle img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center top;
-  }
-
-  /* Text */
-  .name {
-    font-family: 'Playfair Display', serif;
-    font-size: 2rem;
-    font-weight: 600;
-    color: #fff;
-    letter-spacing: -0.02em;
-    text-align: center;
-    margin-bottom: 0.3rem;
-  }
-
-  .title {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.62rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--honey);
-    text-align: center;
-    margin-bottom: 1.75rem;
-  }
-
-  .divider {
-    width: 40px;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(244,184,96,0.4), transparent);
-    margin: 0 auto 1.75rem;
-  }
-
-  .bio {
-    font-size: 0.95rem;
-    line-height: 1.7;
-    color: rgba(244,214,204,0.65);
-    text-align: center;
-    font-weight: 300;
-    letter-spacing: 0.01em;
-    margin-bottom: 2.5rem;
-    max-width: 260px;
-  }
-
-  .cta-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    width: 100%;
-    max-width: 260px;
-    padding: 16px 24px;
-    background: var(--honey);
-    color: var(--gunmetal);
-    border: none;
-    border-radius: 12px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 1rem;
-    font-weight: 500;
-    letter-spacing: 0.01em;
-    cursor: pointer;
-    transition: background 0.2s, transform 0.1s;
-    -webkit-appearance: none;
-    margin-bottom: 1rem;
-  }
-
-  .cta-phone {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.72rem;
-    color: rgba(244,214,204,0.45);
-    text-align: center;
-    letter-spacing: 0.08em;
-    margin-bottom: 0.6rem;
-  }
-
-  .cta-disclosure {
-    font-size: 0.65rem;
-    color: rgba(244,214,204,0.3);
-    text-align: center;
-    line-height: 1.6;
-    max-width: 260px;
-    letter-spacing: 0.01em;
-  }
-
-  .cta-disclosure a {
-    color: rgba(244,214,204,0.4);
-    text-decoration: underline;
-    text-underline-offset: 2px;
-  }
-
-  .cta-btn:active {
-    background: var(--almond);
-    transform: scale(0.97);
-  }
-
-  /* ── CHAT ── */
-  #chat {
     background: #fff;
-    display: flex;
-    flex-direction: column;
   }
 
+  /* ── HEADER ── */
   .chat-header {
-    background: #f2f2f7;
-    padding: env(safe-area-inset-top, 44px) 16px 12px;
+    background: #F5F3EE;
+    padding: env(safe-area-inset-top, 44px) 20px 14px;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    border-bottom: 0.5px solid rgba(0,0,0,0.12);
+    justify-content: space-between;
+    border-bottom: 1px solid #C8C4BC;
     flex-shrink: 0;
     position: relative;
   }
 
-  /* top accent strip on chat header */
-  .chat-header::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, var(--brick), var(--honey));
-  }
-
-  .chat-back {
-    position: absolute;
-    left: 16px;
-    top: calc(env(safe-area-inset-top, 44px) + 10px);
-    background: none;
-    border: none;
-    color: #007aff;
-    font-size: 0.95rem;
-    font-family: 'DM Sans', sans-serif;
-    cursor: pointer;
-    padding: 4px 0;
+  .header-left {
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: 12px;
   }
 
   .chat-avatar {
-    width: 48px;
-    height: 48px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     overflow: hidden;
-    margin-bottom: 4px;
-    border: 2px solid var(--honey);
+    background: #C8C4BC;
+    flex-shrink: 0;
   }
 
   .chat-avatar img {
@@ -250,21 +63,37 @@
     object-position: center top;
   }
 
+  .header-text {}
+
   .chat-name {
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: #000;
-    letter-spacing: -0.2px;
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #1A1916;
+    line-height: 1.2;
   }
 
   .chat-subtitle {
-    font-size: 0.72rem;
-    color: #8a8a8e;
-    margin-top: 1px;
-    font-family: 'DM Mono', monospace;
-    letter-spacing: 0.04em;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #999690;
+    margin-top: 2px;
   }
 
+  .back-link {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #999690;
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .back-link:hover { color: #1A1916; }
+
+  /* ── MESSAGES ── */
   .messages-area {
     flex: 1;
     overflow-y: auto;
@@ -274,6 +103,7 @@
     flex-direction: column;
     gap: 4px;
     -webkit-overflow-scrolling: touch;
+    background: #fff;
   }
 
   .messages-area::-webkit-scrollbar { display: none; }
@@ -338,9 +168,10 @@
     30% { transform: translateY(-5px); }
   }
 
+  /* ── INPUT ── */
   .input-area {
-    background: #f2f2f7;
-    border-top: 0.5px solid rgba(0,0,0,0.12);
+    background: #F5F3EE;
+    border-top: 1px solid #C8C4BC;
     padding: 10px 12px;
     padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
     display: flex;
@@ -352,7 +183,7 @@
   .input-wrap {
     flex: 1;
     background: #fff;
-    border: 0.5px solid rgba(0,0,0,0.18);
+    border: 1px solid #C8C4BC;
     border-radius: 20px;
     display: flex;
     align-items: center;
@@ -367,7 +198,7 @@
     font-size: 16px;
     font-family: inherit;
     background: transparent;
-    color: #000;
+    color: #1A1916;
     resize: none;
     max-height: 100px;
     line-height: 1.4;
@@ -375,7 +206,7 @@
 
   .send-btn {
     width: 32px; height: 32px;
-    background: var(--bubble-out);
+    background: #1A1916;
     border: none;
     border-radius: 50%;
     cursor: pointer;
@@ -387,67 +218,44 @@
     -webkit-appearance: none;
   }
 
-  .send-btn:disabled { opacity: 0.4; }
+  .send-btn:disabled { opacity: 0.3; }
   .send-btn:not(:disabled):active { transform: scale(0.92); }
-  .send-icon { width: 16px; height: 16px; fill: #fff; }
+  .send-icon { width: 16px; height: 16px; fill: #F5F3EE; }
 
   .reset-wrap {
     text-align: center;
-    padding: 6px 0 2px;
+    padding: 4px 0 2px;
     flex-shrink: 0;
-    background: #f2f2f7;
+    background: #F5F3EE;
   }
 
   .reset-btn {
     background: none;
     border: none;
-    color: #8a8a8e;
-    font-size: 12px;
-    font-family: 'DM Mono', monospace;
+    color: #999690;
+    font-size: 10px;
+    font-family: inherit;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
     cursor: pointer;
-    letter-spacing: 0.04em;
     padding: 4px 8px;
   }
 </style>
 </head>
 <body>
 
-<!-- LANDING -->
-<div class="screen" id="landing">
-  <div class="landing-inner">
-
-    <div class="avatar-wrap">
-      <div class="avatar-ring"></div>
-      <div class="avatar-circle">
+<div class="chat-screen">
+  <div class="chat-header">
+    <div class="header-left">
+      <div class="chat-avatar">
         <img src="collin.jpg" alt="Collin Thomas">
       </div>
+      <div class="header-text">
+        <div class="chat-name">Collin Thomas</div>
+        <div class="chat-subtitle">Craft Bartender</div>
+      </div>
     </div>
-
-    <div class="name">Collin Thomas</div>
-    <div class="title">Your Craft Bartender</div>
-    <div class="divider"></div>
-    <div class="bio">Twenty years behind the bar. He knows what to make and exactly how to make it.</div>
-
-    <button class="cta-btn" id="startBtn">
-      💬&nbsp; Message Collin
-    </button>
-
-    <div class="cta-disclosure">
-      <a href="/privacy.html">Privacy</a> &nbsp;·&nbsp; <a href="/terms.html">Terms</a>
-    </div>
-
-  </div>
-</div>
-
-<!-- CHAT -->
-<div class="screen hidden" id="chat">
-  <div class="chat-header">
-    <button class="chat-back" id="backBtn">‹ Back</button>
-    <div class="chat-avatar">
-      <img src="collin.jpg" alt="Collin Thomas">
-    </div>
-    <div class="chat-name">Collin Thomas</div>
-    <div class="chat-subtitle">craft bartender</div>
+    <a href="/" class="back-link">← Home</a>
   </div>
 
   <div class="messages-area" id="messagesArea">
@@ -459,7 +267,7 @@
       <textarea
         class="message-input"
         id="messageInput"
-        placeholder="iMessage"
+        placeholder="Message"
         rows="1"
       ></textarea>
     </div>
@@ -476,140 +284,120 @@
 
 <script>
 let history = [];
-let chatStarted = false;
 
 const openings = [
-    "What can I get you?",
-    "Hey, what can I get ya?",
-    "What'll it be?",
-    "What are we drinking?",
-    "What are you looking for?",
-    "What kind of mood are you in?",
-    "What are we making?",
+  "What can I get you?",
+  "Hey, what can I get ya?",
+  "What'll it be?",
+  "What are we drinking?",
+  "What are you looking for?",
+  "What kind of mood are you in?",
+  "What are we making?",
 ];
 
-const landing    = document.getElementById('landing');
-const chatScreen = document.getElementById('chat');
-const startBtn   = document.getElementById('startBtn');
-const backBtn    = document.getElementById('backBtn');
 const messagesArea = document.getElementById('messagesArea');
 const messageInput = document.getElementById('messageInput');
-const sendBtn    = document.getElementById('sendBtn');
-const resetBtn   = document.getElementById('resetBtn');
-
-startBtn.addEventListener('click', () => {
-    landing.classList.add('hidden');
-    chatScreen.classList.remove('hidden');
-    if (!chatStarted) {
-        chatStarted = true;
-        showOpeningMessage();
-    }
-    setTimeout(() => messageInput.focus(), 400);
-});
-
-backBtn.addEventListener('click', () => {
-    chatScreen.classList.add('hidden');
-    landing.classList.remove('hidden');
-});
+const sendBtn      = document.getElementById('sendBtn');
+const resetBtn     = document.getElementById('resetBtn');
 
 function showOpeningMessage() {
-    const msg = openings[Math.floor(Math.random() * openings.length)];
-    setTimeout(() => {
-        addBubble(msg, 'collin');
-        history.push({ role: 'assistant', content: msg });
-    }, 600);
+  const msg = openings[Math.floor(Math.random() * openings.length)];
+  setTimeout(() => {
+    addBubble(msg, 'collin');
+    history.push({ role: 'assistant', content: msg });
+  }, 600);
 }
 
 messageInput.addEventListener('input', function() {
-    this.style.height = 'auto';
-    this.style.height = Math.min(this.scrollHeight, 100) + 'px';
-    sendBtn.disabled = this.value.trim() === '';
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+  sendBtn.disabled = this.value.trim() === '';
 });
 
 messageInput.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        if (!sendBtn.disabled) send();
-    }
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    if (!sendBtn.disabled) send();
+  }
 });
 
 sendBtn.addEventListener('click', send);
 resetBtn.addEventListener('click', reset);
 
 function addBubble(text, role) {
-    const row = document.createElement('div');
-    row.className = `bubble-row ${role}`;
-    const bubble = document.createElement('div');
-    bubble.className = `bubble ${role}`;
-    bubble.textContent = text;
-    row.appendChild(bubble);
-    messagesArea.appendChild(row);
-    messagesArea.scrollTop = messagesArea.scrollHeight;
+  const row = document.createElement('div');
+  row.className = `bubble-row ${role}`;
+  const bubble = document.createElement('div');
+  bubble.className = `bubble ${role}`;
+  bubble.textContent = text;
+  row.appendChild(bubble);
+  messagesArea.appendChild(row);
+  messagesArea.scrollTop = messagesArea.scrollHeight;
 }
 
 function showTyping() {
-    const row = document.createElement('div');
-    row.className = 'bubble-row collin';
-    const ind = document.createElement('div');
-    ind.className = 'typing-indicator';
-    ind.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
-    row.appendChild(ind);
-    messagesArea.appendChild(row);
-    messagesArea.scrollTop = messagesArea.scrollHeight;
-    return row;
+  const row = document.createElement('div');
+  row.className = 'bubble-row collin';
+  const ind = document.createElement('div');
+  ind.className = 'typing-indicator';
+  ind.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+  row.appendChild(ind);
+  messagesArea.appendChild(row);
+  messagesArea.scrollTop = messagesArea.scrollHeight;
+  return row;
 }
 
 async function send() {
-    const text = messageInput.value.trim();
-    if (!text) return;
+  const text = messageInput.value.trim();
+  if (!text) return;
 
-    addBubble(text, 'user');
-    history.push({ role: 'user', content: text });
+  addBubble(text, 'user');
+  history.push({ role: 'user', content: text });
 
-    messageInput.value = '';
-    messageInput.style.height = 'auto';
-    sendBtn.disabled = true;
-    messageInput.disabled = true;
+  messageInput.value = '';
+  messageInput.style.height = 'auto';
+  sendBtn.disabled = true;
+  messageInput.disabled = true;
 
-    const typingRow = showTyping();
+  const typingRow = showTyping();
 
-    try {
-        const res = await fetch('/api/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ messages: history })
-        });
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: history })
+    });
 
-        const data = await res.json();
-        typingRow.remove();
+    const data = await res.json();
+    typingRow.remove();
 
-        let reply = data.content?.find(b => b.type === 'text')?.text
-            || "Hey. Something went sideways on my end — try again?";
+    const reply = data.content?.find(b => b.type === 'text')?.text
+      || "Hey. Something went sideways on my end — try again?";
 
-        history.push({ role: 'assistant', content: reply });
+    history.push({ role: 'assistant', content: reply });
 
-        const paragraphs = reply.split(/\n\n+/).filter(p => p.trim());
-        for (let i = 0; i < paragraphs.length; i++) {
-            if (i > 0) await new Promise(r => setTimeout(r, 350));
-            addBubble(paragraphs[i].trim(), 'collin');
-        }
-
-    } catch (err) {
-        typingRow.remove();
-        addBubble("Hey. Something went sideways on my end — try again?", 'collin');
+    const paragraphs = reply.split(/\n\n+/).filter(p => p.trim());
+    for (let i = 0; i < paragraphs.length; i++) {
+      if (i > 0) await new Promise(r => setTimeout(r, 350));
+      addBubble(paragraphs[i].trim(), 'collin');
     }
 
-    messageInput.disabled = false;
-    messageInput.focus();
+  } catch (err) {
+    typingRow.remove();
+    addBubble("Hey. Something went sideways on my end — try again?", 'collin');
+  }
+
+  messageInput.disabled = false;
+  messageInput.focus();
 }
 
 function reset() {
-    history = [];
-    chatStarted = false;
-    messagesArea.innerHTML = '<div class="time-label">Today</div>';
-    chatStarted = true;
-    showOpeningMessage();
+  history = [];
+  messagesArea.innerHTML = '<div class="time-label">Today</div>';
+  showOpeningMessage();
 }
+
+showOpeningMessage();
 </script>
 </body>
 </html>
