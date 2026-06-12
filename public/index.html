@@ -5,9 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Collin Thomas — Craft Bartender</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400&display=swap');
-
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
   html, body {
     min-height: 100%;
@@ -26,7 +24,7 @@
     flex-direction: column;
     align-items: flex-start;
     width: 100%;
-    max-width: 360px;
+    max-width: 380px;
     padding: 48px 32px 64px;
   }
 
@@ -53,7 +51,6 @@
     text-transform: uppercase;
     color: #999690;
     margin-bottom: 8px;
-    font-weight: 400;
   }
 
   .name {
@@ -86,13 +83,63 @@
     font-weight: 400;
     color: #6B6860;
     line-height: 1.7;
-    margin-bottom: 32px;
+    margin-bottom: 8px;
   }
 
-  .form-wrap {
+  .section-label {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #999690;
+    margin: 32px 0 16px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #C8C4BC;
+  }
+
+  .options {
     width: 100%;
     display: flex;
     flex-direction: column;
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+
+  .card {
+    width: 100%;
+    border: 1px solid #C8C4BC;
+    border-radius: 0;
+    padding: 20px;
+  }
+
+  .card-label {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #999690;
+    margin-bottom: 8px;
+  }
+
+  .card-title {
+    font-size: 15px;
+    font-weight: 500;
+    color: #1A1916;
+    margin-bottom: 6px;
+  }
+
+  .card-desc {
+    font-size: 12px;
+    color: #6B6860;
+    line-height: 1.6;
+    margin-bottom: 16px;
   }
 
   .field-label {
@@ -103,50 +150,60 @@
     margin-bottom: 8px;
   }
 
-  .phone-input {
+  input.phone-input {
+    display: block;
     width: 100%;
     padding: 12px 0;
     background: transparent;
+    background-image: none;
     border: none;
+    border-radius: 0;
     border-bottom: 1px solid #C8C4BC;
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-family: inherit;
     font-size: 15px;
     color: #1A1916;
     outline: none;
-    margin-bottom: 24px;
+    margin-bottom: 16px;
     letter-spacing: 0.04em;
     -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    box-shadow: none;
   }
 
-  .phone-input::placeholder { color: #C8C4BC; }
-  .phone-input:focus { border-bottom-color: #6B6860; }
+  input.phone-input::placeholder { color: #C8C4BC; }
+  input.phone-input:focus { border-bottom-color: #6B6860; }
 
   .consent-row {
     display: flex;
     align-items: flex-start;
     gap: 10px;
-    margin-bottom: 32px;
+    margin-bottom: 16px;
   }
 
-  .consent-checkbox {
+  input.consent-checkbox {
     width: 14px;
     height: 14px;
     flex-shrink: 0;
     margin-top: 2px;
     border: 1px solid #C8C4BC;
+    border-radius: 0;
     background: transparent;
-    appearance: none;
+    background-image: none;
     -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
     cursor: pointer;
+    box-shadow: none;
     position: relative;
   }
 
-  .consent-checkbox:checked {
+  input.consent-checkbox:checked {
     background: #1A1916;
     border-color: #1A1916;
   }
 
-  .consent-checkbox:checked::after {
+  input.consent-checkbox:checked::after {
     content: '';
     position: absolute;
     left: 3px;
@@ -172,62 +229,55 @@
     text-underline-offset: 2px;
   }
 
-  .submit-btn {
+  .btn {
+    display: block;
     width: 100%;
     padding: 14px 24px;
-    background: #1A1916;
-    color: #F5F3EE;
-    border: none;
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    border: 1px solid #1A1916;
+    border-radius: 0;
+    font-family: inherit;
     font-size: 13px;
     font-weight: 400;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     cursor: pointer;
-    margin-bottom: 12px;
-    transition: background 0.2s;
-    -webkit-appearance: none;
-  }
-
-  .submit-btn:disabled {
-    background: #C8C4BC;
-    color: #F5F3EE;
-    cursor: default;
-  }
-
-  .submit-btn:not(:disabled):active {
-    background: #3A3834;
-  }
-
-  .browser-link {
-    display: block;
-    width: 100%;
-    padding: 14px 24px;
-    background: transparent;
-    color: #6B6860;
-    border: 1px solid #C8C4BC;
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    font-size: 13px;
-    font-weight: 400;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
     text-align: center;
     text-decoration: none;
-    margin-bottom: 40px;
-    transition: border-color 0.2s, color 0.2s;
+    background: transparent;
+    background-image: none;
+    color: #1A1916;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    box-shadow: none;
+    margin: 0;
+    line-height: normal;
   }
 
-  .browser-link:hover {
-    border-color: #6B6860;
-    color: #1A1916;
+  .btn-primary:disabled,
+  .btn-primary.disabled {
+    border-color: #D9D5CC;
+    color: #C8C4BC;
+    cursor: default;
+    background: transparent;
+  }
+
+  .btn-primary:not(:disabled):not(.disabled) {
+    background: #1A1916;
+    color: #F5F3EE;
+    border-color: #1A1916;
+  }
+
+  .btn-primary:not(:disabled):not(.disabled):active {
+    background: #3A3834;
   }
 
   .error-msg {
     display: none;
     font-size: 11px;
     color: #C05A3A;
-    margin-top: -24px;
-    margin-bottom: 16px;
+    margin-top: 12px;
   }
 
   .error-msg.visible { display: block; }
@@ -236,15 +286,14 @@
     display: none;
     flex-direction: column;
     gap: 8px;
-    padding: 20px 0;
   }
 
   .success.visible { display: flex; }
 
   .success-text {
-    font-size: 15px;
+    font-size: 13px;
     color: #1A1916;
-    font-weight: 300;
+    font-weight: 400;
     letter-spacing: 0.01em;
   }
 
@@ -274,40 +323,56 @@
   <div class="name">Collin Thomas</div>
   <div class="rule"></div>
 
-  <div class="headline">Your personal bartender, available by text.</div>
+  <div class="headline">Your personal bartender, available by text or browser.</div>
   <div class="bio">Not a recipe database — more like a friend who's been bartending for twenty years and actually wants to talk about what you're making. Powered by AI, he knows the difference between a Toronto and a Black Manhattan, and when each one is right.</div>
 
-  <div class="form-wrap" id="formWrap">
+  <div class="section-label">Two ways to talk to Collin</div>
 
-    <div class="field-label">Your phone number</div>
-    <input
-      type="tel"
-      class="phone-input"
-      id="phoneInput"
-      placeholder="(555) 000-0000"
-      maxlength="14"
-      inputmode="tel"
-      autocomplete="tel"
-    />
+  <div class="options">
 
-    <div class="consent-row">
-      <input type="checkbox" class="consent-checkbox" id="consentBox" />
-      <label class="consent-label" for="consentBox">
-        I agree to receive drink recommendations and related conversational messages via SMS from Collin Thomas. Message and data rates may apply. Reply STOP to unsubscribe, HELP for help. No mobile data will be shared with third parties for marketing purposes. &nbsp;
-        <a href="/privacy.html" target="_blank">Privacy Policy</a> &nbsp;·&nbsp;
-        <a href="/terms.html" target="_blank">Terms</a>
-      </label>
+    <div class="card">
+      <div class="card-label">Option 1</div>
+      <div class="card-title">Chat in browser</div>
+      <div class="card-desc">No signup, no phone number. Start talking to Collin right now.</div>
+      <a href="/collin.html" class="btn">Open Chat</a>
     </div>
 
-    <button class="submit-btn" id="submitBtn" disabled>Text Collin</button>
-    <a href="/collin.html" class="browser-link">Chat in browser</a>
+    <div class="card">
+      <div class="card-label">Option 2</div>
+      <div class="card-title">Text Collin</div>
+      <div class="card-desc">Prefer texting? Drop your number and Collin will reach out — same conversation, from your phone.</div>
 
-    <div class="error-msg" id="errorMsg">Something went wrong — try again in a moment.</div>
+      <div id="formWrap">
+        <div class="field-label">Your phone number</div>
+        <input
+          type="tel"
+          class="phone-input"
+          id="phoneInput"
+          placeholder="(555) 000-0000"
+          maxlength="14"
+          inputmode="tel"
+          autocomplete="tel"
+        />
 
-  </div>
+        <div class="consent-row">
+          <input type="checkbox" class="consent-checkbox" id="consentBox" />
+          <label class="consent-label" for="consentBox">
+            I agree to receive drink recommendations and related conversational messages via SMS from Collin Thomas. Message and data rates may apply. Reply STOP to unsubscribe, HELP for help. No mobile data will be shared with third parties for marketing purposes. &nbsp;
+            <a href="/privacy.html" target="_blank">Privacy</a> &nbsp;·&nbsp;
+            <a href="/terms.html" target="_blank">Terms</a>
+          </label>
+        </div>
 
-  <div class="success" id="successMsg">
-    <div class="success-text">I'll text you shortly.</div>
+        <button class="btn btn-primary disabled" id="submitBtn" disabled>Text Collin</button>
+
+        <div class="error-msg" id="errorMsg">Something went wrong — try again in a moment.</div>
+      </div>
+
+      <div class="success" id="successMsg">
+        <div class="success-text">I'll text you shortly.</div>
+      </div>
+    </div>
+
   </div>
 
   <div class="footer-links">
@@ -335,7 +400,9 @@ function formatPhone(val) {
 
 function checkReady() {
   const digits = phoneInput.value.replace(/\D/g, '');
-  submitBtn.disabled = !(digits.length === 10 && consentBox.checked);
+  const ready = digits.length === 10 && consentBox.checked;
+  submitBtn.disabled = !ready;
+  submitBtn.classList.toggle('disabled', !ready);
 }
 
 phoneInput.addEventListener('input', function() {
@@ -369,6 +436,7 @@ submitBtn.addEventListener('click', async () => {
   } catch (err) {
     errorMsg.classList.add('visible');
     submitBtn.disabled = false;
+    submitBtn.classList.remove('disabled');
     submitBtn.textContent = 'Text Collin';
   }
 });
