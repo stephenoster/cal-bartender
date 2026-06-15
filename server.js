@@ -3,6 +3,10 @@ const path = require('path');
 const twilio = require('twilio');
 const pool = require('./db');
 
+pool.on('error', (err) => {
+  console.error('Unexpected pg pool error:', err.message);
+});
+
 async function initDb() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
@@ -246,30 +250,24 @@ app.post('/api/chat', async (req, res) => {
 
 // ── Twilio SMS webhook ──────────────────────────────────────────────────────
 app.post('/sms', async (req, res) => {
-  // Validate the request is actually from Twilio
-// const twilioSignature = req.headers['x-twilio-signature'];
-// const webhookUrl = 'https://cal-bartender-production.up.railway.app/sms';
+  // Always respond to Twilio immediately to prevent timeouts
+  res.set('Content-Type', 'text/xml');
+  res.send('<Response></Response>');
 
-// const isValid = twilio.validateRequest(
-//   process.env.TWILIO_AUTH_TOKEN,
-//   twilioSignature,
-//   webhookUrl,
-//   req.body
-// );
-
-// if (!isValid) {
-//   console.warn('Invalid Twilio signature — request rejected');
-//   return res.status(403).send('Forbidden');
-// }
   const userPhone = req.body.From;
   const incomingMessage = req.body.Body?.trim();
 
-  if (!incomingMessage) {
-    res.set('Content-Type', 'text/xml');
-    return res.send('<Response></Response>');
-  }
+  console.log(`=== /sms hit ===`);
+  console.log(`From: ${userPhone}`);
+  console.log(`Body: ${incomingMessage}`);
+  console.log(`ANTHROPIC KEY exists: ${!!process.env.ANTHROPIC_API_KEY}`);
+  console.log(`TWILIO SID exists: ${!!process.env.TWILIO_ACCOUNT_SID}`);
+  console.log(`TWILIO PHONE: ${process.env.TWILIO_PHONE_NUMBER}`);
 
-  console.log(`SMS from ${userPhone}: ${incomingMessage}`);
+  if (!incomingMessage) {
+    console.log('No message body — exiting');
+    return;
+  }
 
   // Initialize conversation history for new users
   if (!conversations[userPhone]) {
@@ -288,14 +286,14 @@ app.post('/sms', async (req, res) => {
   const authToken = process.env.TWILIO_AUTH_TOKEN;
 
   if (!accountSid || !authToken) {
-    console.error('Missing Twilio credentials');
-    res.set('Content-Type', 'text/xml');
-    return res.send('<Response></Response>');
+    console.error('Missing Twilio credentials — cannot send reply');
+    return;
   }
 
   const client = twilio(accountSid, authToken);
 
   try {
+    console.log('Calling Anthropic...');
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -311,6 +309,7 @@ app.post('/sms', async (req, res) => {
       }),
     });
 
+    console.log(`Anthropic status: ${response.status}`);
     const data = await response.json();
 
     if (!response.ok) {
@@ -318,6 +317,7 @@ app.post('/sms', async (req, res) => {
     }
 
     const reply = data.content[0].text;
+    console.log(`Reply generated (${reply.length} chars)`);
 
     // Add Collin's reply to history
     conversations[userPhone].push({ role: 'assistant', content: reply });
@@ -325,6 +325,7 @@ app.post('/sms', async (req, res) => {
     // SMS has a 1600 char limit — split if needed
     const chunks = reply.length <= 1600 ? [reply] : splitMessage(reply, 1580);
 
+    console.log(`Sending ${chunks.length} chunk(s) to ${userPhone}`);
     for (const chunk of chunks) {
       await client.messages.create({
         body: chunk,
@@ -332,8 +333,11 @@ app.post('/sms', async (req, res) => {
         to: userPhone,
       });
     }
+    console.log('SMS sent successfully');
+
   } catch (err) {
-    console.error('Error generating SMS reply:', err);
+    console.error('CAUGHT ERROR in /sms:', err.message);
+    console.error(err.stack);
 
     try {
       await client.messages.create({
@@ -342,13 +346,9 @@ app.post('/sms', async (req, res) => {
         to: userPhone,
       });
     } catch (twilioErr) {
-      console.error('Failed to send error SMS:', twilioErr);
+      console.error('Failed to send error SMS:', twilioErr.message);
     }
   }
-
-  // Always respond to Twilio with empty TwiML (replies sent via API above)
-  res.set('Content-Type', 'text/xml');
-  res.send('<Response></Response>');
 });
 
 // Helper: split long messages at paragraph breaks
