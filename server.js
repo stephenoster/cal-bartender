@@ -400,6 +400,127 @@ app.post('/join', async (req, res) => {
   }
 });
 
+// ── Telnyx SMS webhook ──────────────────────────────────────────────────────
+app.post('/sms-telnyx', async (req, res) => {
+  // Respond immediately — Telnyx requires a 200 within 2 seconds
+  res.sendStatus(200);
+
+  const event = req.body?.data;
+
+  // Only handle inbound messages
+  if (!event || event.event_type !== 'message.received') {
+    console.log('Telnyx: ignoring event type:', event?.event_type);
+    return;
+  }
+
+  const payload = event.payload;
+  const userPhone = payload?.from?.phone_number;
+  const incomingMessage = payload?.text?.trim();
+
+  console.log(`=== Telnyx /sms-telnyx hit ===`);
+  console.log(`From: ${userPhone}`);
+  console.log(`Body: ${incomingMessage}`);
+
+  if (!incomingMessage || !userPhone) {
+    console.log('Telnyx: missing phone or message body — exiting');
+    return;
+  }
+
+  // Initialize conversation history for new users
+  if (!conversations[userPhone]) {
+    conversations[userPhone] = [];
+  }
+
+  conversations[userPhone].push({ role: 'user', content: incomingMessage });
+
+  if (conversations[userPhone].length > MAX_HISTORY) {
+    conversations[userPhone] = conversations[userPhone].slice(-MAX_HISTORY);
+  }
+
+  const telnyxApiKey = process.env.TELNYX_API_KEY;
+  const telnyxPhone = process.env.TELNYX_PHONE_NUMBER;
+
+  if (!telnyxApiKey || !telnyxPhone) {
+    console.error('Telnyx: missing credentials');
+    return;
+  }
+
+  try {
+    console.log('Telnyx: calling Anthropic...');
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 1000,
+        system: COLLIN_SYSTEM_PROMPT,
+        messages: conversations[userPhone],
+      }),
+    });
+
+    console.log(`Telnyx: Anthropic status: ${response.status}`);
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(`Anthropic error: ${JSON.stringify(data)}`);
+    }
+
+    const reply = data.content[0].text;
+    console.log(`Telnyx: reply generated (${reply.length} chars)`);
+
+    conversations[userPhone].push({ role: 'assistant', content: reply });
+
+    const chunks = reply.length <= 1600 ? [reply] : splitMessage(reply, 1580);
+
+    for (const chunk of chunks) {
+      const sendRes = await fetch('https://api.telnyx.com/v2/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${telnyxApiKey}`,
+        },
+        body: JSON.stringify({
+          from: telnyxPhone,
+          to: userPhone,
+          text: chunk,
+        }),
+      });
+
+      const sendData = await sendRes.json();
+      if (!sendRes.ok) {
+        throw new Error(`Telnyx send error: ${JSON.stringify(sendData)}`);
+      }
+    }
+
+    console.log('Telnyx: SMS sent successfully');
+
+  } catch (err) {
+    console.error('Telnyx: CAUGHT ERROR:', err.message);
+
+    // Send error message back via Telnyx
+    try {
+      await fetch('https://api.telnyx.com/v2/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${telnyxApiKey}`,
+        },
+        body: JSON.stringify({
+          from: telnyxPhone,
+          to: userPhone,
+          text: "Hey — something went sideways on my end. Give me a second and try again.",
+        }),
+      });
+    } catch (telnyxErr) {
+      console.error('Telnyx: failed to send error SMS:', telnyxErr.message);
+    }
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 initDb()
   .then(() => {
