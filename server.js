@@ -371,10 +371,17 @@ function splitMessage(text, maxLength) {
 }
 // ── Web opt-in form endpoint ────────────────────────────────────────────────
 app.post('/join', async (req, res) => {
-  const { phone } = req.body;
+  const { phone, smsConsent } = req.body;
 
   if (!phone || !/^\+1\d{10}$/.test(phone)) {
     return res.status(400).json({ error: 'invalid phone number' });
+  }
+
+  // TODO: upsert user into DB here once database wiring is complete
+
+  // If they didn't opt in to SMS, nothing else to do
+  if (!smsConsent) {
+    return res.json({ ok: true });
   }
 
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
