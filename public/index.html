@@ -217,7 +217,7 @@
   }
 
   .consent-label {
-    font-size: 11px;
+    font-size: 12px;
     color: #999690;
     line-height: 1.6;
     cursor: pointer;
@@ -301,7 +301,6 @@
     font-size: 10px;
     color: #C8C4BC;
     letter-spacing: 0.06em;
-    line-height: 1.8;
   }
 
   .footer-links a {
@@ -325,64 +324,53 @@
   <div class="rule"></div>
 
   <div class="headline">Your personal bartender, available by text or browser.</div>
-  <div class="bio">Not a recipe database — more like a friend who's been bartending for twenty years and actually wants to talk about what you're making. Powered by AI, he knows the difference between a Toronto and a Black Manhattan, and when each one is right.</div>
+  <div class="bio">Not a recipe database — more like a friend who's been bartending for twenty years and actually wants to talk about what you're making.</div>
 
-  <div class="section-label">Two ways to talk to Collin</div>
 
-  <div class="options">
+  <div id="formWrap" style="width:100%; margin-bottom: 32px;">
+    <div class="field-label">Your phone number</div>
+    <input
+      type="tel"
+      class="phone-input"
+      id="phoneInput"
+      placeholder="(555) 000-0000"
+      maxlength="14"
+      inputmode="tel"
+      autocomplete="tel"
+    />
 
-    <div class="card">
-      <div class="card-label">Option 1</div>
-      <div class="card-title">Chat in browser</div>
-      <div class="card-desc">No signup, no phone number. Start talking to Collin right now.</div>
-      <a href="/collin.html" class="btn">Open Chat</a>
+    <div class="consent-row">
+      <input type="checkbox" class="consent-checkbox" id="consentBox" />
+      <label class="consent-label" for="consentBox">
+        Check this box if you'd like to receive drink recommendations via SMS. Msg &amp; data rates may vary. Reply STOP to opt out, HELP for help. No opt-in data shared with third parties for marketing. &nbsp;
+        <a href="/privacy.html" target="_blank">Privacy</a> &nbsp;·&nbsp;
+        <a href="/terms.html" target="_blank">Terms</a>
+      </label>
     </div>
 
-    <div class="card">
-      <div class="card-label">Option 2</div>
-      <div class="card-title">Text Collin</div>
-      <div class="card-desc">Prefer texting? Drop your number and Collin will reach out — same conversation, from your phone.</div>
+    <button class="btn btn-primary" id="submitBtn">Chat with Collin</button>
 
-      <div id="formWrap">
-        <div class="field-label">Your phone number</div>
-        <input
-          type="tel"
-          class="phone-input"
-          id="phoneInput"
-          placeholder="(555) 000-0000"
-          maxlength="14"
-          inputmode="tel"
-          autocomplete="tel"
-        />
+    <div class="error-msg" id="errorMsg">Something went wrong — try again in a moment.</div>
+  </div>
 
-        <div class="consent-row">
-          <input type="checkbox" class="consent-checkbox" id="consentBox" />
-          <label class="consent-label" for="consentBox">
-            I agree to receive drink recommendations and related conversational messages via SMS from Collin Thomas. Message and data rates may apply. Msg frequency may vary. Reply STOP to unsubscribe, HELP for help. No mobile data will be shared with third parties for marketing purposes. &nbsp;
-            <a href="/privacy.html" target="_blank">Privacy</a> &nbsp;·&nbsp;
-            <a href="/terms.html" target="_blank">Terms</a>
-          </label>
-        </div>
-
-        <button class="btn btn-primary disabled" id="submitBtn" disabled>Text Collin</button>
-
-        <div class="error-msg" id="errorMsg">Something went wrong — try again in a moment.</div>
-      </div>
-
-      <div class="success" id="successMsg">
-        <div class="success-text">I'll text you shortly.</div>
-      </div>
-    </div>
-
+  <div class="success" id="successMsg">
+    <div class="success-text">You're all set. Check your texts — Collin will be in touch shortly.</div>
   </div>
 
   <div class="footer-links">
     © 2026 Collin Thomas &nbsp;·&nbsp;
     <a href="/privacy.html">Privacy</a> &nbsp;·&nbsp;
-    <a href="/terms.html">Terms</a><br>
-    <span id="em"></span> &nbsp;·&nbsp;
+    <a href="/terms.html">Terms</a><br><br>
+    <span id="email"></span><br>
     4719 Stafford Circle, Charlotte, NC 28211
   </div>
+
+  <script>
+    // Obfuscated email
+    const u = 'hello', d = 'collinthomas.bar';
+    const el = document.getElementById('email');
+    el.innerHTML = '<a href="mailto:' + u + '@' + d + '">' + u + '@' + d + '</a>';
+  </script>
 
 </div>
 
@@ -390,9 +378,9 @@
 const phoneInput = document.getElementById('phoneInput');
 const consentBox = document.getElementById('consentBox');
 const submitBtn  = document.getElementById('submitBtn');
+const errorMsg   = document.getElementById('errorMsg');
 const formWrap   = document.getElementById('formWrap');
 const successMsg = document.getElementById('successMsg');
-const errorMsg   = document.getElementById('errorMsg');
 
 function formatPhone(val) {
   const digits = val.replace(/\D/g, '').slice(0, 10);
@@ -401,60 +389,58 @@ function formatPhone(val) {
   return `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
 }
 
-function checkReady() {
-  const digits = phoneInput.value.replace(/\D/g, '');
-  const ready = digits.length === 10 && consentBox.checked;
-  submitBtn.disabled = !ready;
-  submitBtn.classList.toggle('disabled', !ready);
-}
-
 phoneInput.addEventListener('input', function() {
   const raw = this.value.replace(/\D/g, '');
   this.value = formatPhone(raw);
-  checkReady();
 });
-
-consentBox.addEventListener('change', checkReady);
 
 submitBtn.addEventListener('click', async () => {
   const digits = phoneInput.value.replace(/\D/g, '');
+  const smsConsent = consentBox.checked;
+
+  // No phone, no consent — just go to chat
+  if (digits.length !== 10 && !smsConsent) {
+    window.location.href = '/collin.html';
+    return;
+  }
+
+  // No phone but consent checked — just go to chat (nothing to register)
+  if (digits.length !== 10) {
+    window.location.href = '/collin.html';
+    return;
+  }
+
+  // Has phone — register regardless, send SMS only if opted in
   const phone = `+1${digits}`;
 
   submitBtn.disabled = true;
-  submitBtn.textContent = 'Sending...';
+  submitBtn.classList.add('disabled');
+  submitBtn.textContent = 'One sec...';
   errorMsg.classList.remove('visible');
 
   try {
     const res = await fetch('/join', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone })
+      body: JSON.stringify({ phone, smsConsent })
     });
 
     if (!res.ok) throw new Error('server error');
 
-    formWrap.style.display = 'none';
-    successMsg.classList.add('visible');
+    if (smsConsent) {
+      formWrap.style.display = 'none';
+      successMsg.classList.add('visible');
+    } else {
+      window.location.href = '/collin.html';
+    }
 
   } catch (err) {
     errorMsg.classList.add('visible');
     submitBtn.disabled = false;
     submitBtn.classList.remove('disabled');
-    submitBtn.textContent = 'Text Collin';
+    submitBtn.textContent = 'Chat with Collin';
   }
 });
-// Email obfuscation
-(function() {
-  const u = 'hello';
-  const d = 'collinthomas.bar';
-  const el = document.getElementById('em');
-  const a = document.createElement('a');
-  a.href = 'mailto:' + u + '@' + d;
-  a.textContent = u + '@' + d;
-  a.style.color = '#C8C4BC';
-  a.style.textDecoration = 'none';
-  el.appendChild(a);
-})();
 </script>
 </body>
 </html>
