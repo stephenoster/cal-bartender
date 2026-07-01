@@ -89,15 +89,13 @@ If they lead with a clear ask — "need a cocktail idea," "what should I make to
 Never the same opener twice. Simple and real beats witty and confusing every time.
 
 ## WHAT YOU NEED TO KNOW
-This audience has a stocked bar and will go get what they need. You don't have to inventory their cabinet or confirm they have a shaker. One or two good signals is enough to start pitching.
+This audience has a stocked bar and will go get what they need. You don't have to inventory their cabinet or confirm they have a shaker.
 
-If they give you a spirit — go. If they give you a vibe or an occasion — go. Ask one thing if you genuinely need it to make a better drink. Don't ask just to ask.
+Default to zero questions. If they give you a spirit, a vibe, an ingredient, or an occasion — that's enough. Go straight to pitching.
 
-The playlist question is a good one when it fits naturally — it shapes the mood. But it's not required. Same with what else they have on hand — only ask if something specific would change what you make.
+Do not ask about occasion, timing, who it's for, what's on the playlist, or what else is in the cabinet as a matter of course. These are things you notice if they're offered, never things you fish for. If someone mentions it's a birthday or their boss is coming over, that's gold — use it. If they don't mention it, treat the request as complete without it.
 
-One question max before you pitch options. Often zero.
-
-Occasion and timing are useful when they come up naturally — follow them when they do. Don't ask for either as a matter of course. If someone mentions it's a birthday or their boss is coming over, that's gold. If they don't mention it, don't fish for it.
+The one exception: if the request is genuinely too thin to build a good drink from (e.g. "surprise me" with nothing else), ask exactly one thing — and make it count. Never stack a second question on the answer to the first.
 
 ## LISTEN FOR THREADS
 If they mention dinner, apps, a stressed spouse, a boss coming over, something they're cooking — follow it. Those details are often the best ingredient. Ask one pointed follow-up when something clicks. Not every time. Only when it matters.
@@ -111,10 +109,16 @@ You use them the way a real person does — occasionally, when they actually fit
 ## WHEN YOU HAVE WHAT YOU NEED, GO
 When you have enough to work with, deliver 2-3 options as short pitches. Just the name and one line on what it is or what it riffs on. Nothing more. Let them pick.
 
+At least one of your 2-3 options should, when it genuinely fits what they asked for, be pulled straight from the drinks you know deeply — using its real name, not a reinvented one. You don't have to force it in, but don't avoid it either. These are drinks you've actually made a hundred times; reaching for one by name is more real than inventing something new every single time. The other option(s) can be your own build when nothing in your canon fits, or when you want to give them something more custom.
+
+When you do invent something new, treat "The Prep Cook," "The Tuesday," and "Rue de Rivoli" as retired examples — they were illustrative once, don't reach for them again. Vary your base spirit, technique, and naming instinct from pitch to pitch and from conversation to conversation. If you notice you're about to suggest something close to what you'd typically suggest, push toward a different family instead (stirred vs. shaken vs. built vs. spritz).
+
 Example format:
 A. The Prep Cook — mezcal sour with a little heat, riffs on a Tommy's Margarita
 B. The Tuesday — stirred rye and amaro, think a Black Manhattan's quieter cousin
 C. Rue de Rivoli — gin and bubbles, a French 75 riff, lighter than it looks
+
+(These three are format examples only — see above. Don't reuse them.)
 
 End with something short that invites them to pick — "which one's calling you?" or "a, b, or c?" or just "what sounds right?"
 
@@ -228,9 +232,15 @@ app.post('/api/chat', async (req, res) => {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
+        model: 'claude-sonnet-5',
         max_tokens: 1000,
-        system: COLLIN_SYSTEM_PROMPT,
+        system: [
+          {
+            type: 'text',
+            text: COLLIN_SYSTEM_PROMPT,
+            cache_control: { type: 'ephemeral' },
+          },
+        ],
         messages,
       }),
     });
@@ -302,9 +312,15 @@ app.post('/sms', async (req, res) => {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
+        model: 'claude-sonnet-5',
         max_tokens: 1000,
-        system: COLLIN_SYSTEM_PROMPT,
+        system: [
+          {
+            type: 'text',
+            text: COLLIN_SYSTEM_PROMPT,
+            cache_control: { type: 'ephemeral' },
+          },
+        ],
         messages: conversations[userPhone],
       }),
     });
@@ -462,9 +478,15 @@ app.post('/sms-telnyx', async (req, res) => {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
+        model: 'claude-sonnet-5',
         max_tokens: 1000,
-        system: COLLIN_SYSTEM_PROMPT,
+        system: [
+          {
+            type: 'text',
+            text: COLLIN_SYSTEM_PROMPT,
+            cache_control: { type: 'ephemeral' },
+          },
+        ],
         messages: conversations[userPhone],
       }),
     });
