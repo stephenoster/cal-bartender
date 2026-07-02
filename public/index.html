@@ -142,6 +142,65 @@
     margin-bottom: 16px;
   }
 
+  .age-gate-wrap {
+    width: 100%;
+    margin-bottom: 28px;
+  }
+
+  .age-gate-label {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #999690;
+    margin-bottom: 12px;
+    display: block;
+  }
+
+  .dob-row {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .dob-select {
+    flex: 1;
+    padding: 12px 8px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid #C8C4BC;
+    border-radius: 0;
+    font-family: inherit;
+    font-size: 14px;
+    color: #1A1916;
+    outline: none;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23999690'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 4px center;
+  }
+
+  .dob-select:focus { border-bottom-color: #6B6860; }
+  .dob-select option { color: #1A1916; }
+
+  .age-error {
+    display: none;
+    font-size: 11px;
+    color: #C05A3A;
+    margin-top: 10px;
+  }
+
+  .age-error.visible { display: block; }
+
+  .phone-section {
+    display: none;
+  }
+
+  .phone-section.visible {
+    display: block;
+  }
+
   .field-label {
     font-size: 10px;
     letter-spacing: 0.12em;
@@ -328,29 +387,59 @@
 
 
   <div id="formWrap" style="width:100%; margin-bottom: 32px;">
-    <div class="field-label">Your phone number</div>
-    <input
-      type="tel"
-      class="phone-input"
-      id="phoneInput"
-      placeholder="(555) 000-0000"
-      maxlength="14"
-      inputmode="tel"
-      autocomplete="tel"
-    />
-
-    <div class="consent-row">
-      <input type="checkbox" class="consent-checkbox" id="consentBox" />
-      <label class="consent-label" for="consentBox">
-        Check this box if you'd like to receive drink recommendations via SMS. Msg &amp; data rates may vary. Reply STOP to opt out, HELP for help. No opt-in data shared with third parties for marketing. &nbsp;
-        <a href="/privacy.html" target="_blank">Privacy</a> &nbsp;·&nbsp;
-        <a href="/terms.html" target="_blank">Terms</a>
-      </label>
+    <div class="age-gate-wrap">
+      <span class="age-gate-label">Date of birth</span>
+      <div class="dob-row">
+        <select class="dob-select" id="dobMonth">
+          <option value="" disabled selected>Month</option>
+          <option value="1">January</option>
+          <option value="2">February</option>
+          <option value="3">March</option>
+          <option value="4">April</option>
+          <option value="5">May</option>
+          <option value="6">June</option>
+          <option value="7">July</option>
+          <option value="8">August</option>
+          <option value="9">September</option>
+          <option value="10">October</option>
+          <option value="11">November</option>
+          <option value="12">December</option>
+        </select>
+        <select class="dob-select" id="dobDay">
+          <option value="" disabled selected>Day</option>
+        </select>
+        <select class="dob-select" id="dobYear">
+          <option value="" disabled selected>Year</option>
+        </select>
+      </div>
+      <div class="age-error" id="ageError">You must be 21 or older to use this service.</div>
     </div>
 
-    <button class="btn btn-primary" id="submitBtn">Chat with Collin</button>
+    <div class="phone-section" id="phoneSection">
+      <div class="field-label">Your phone number</div>
+      <input
+        type="tel"
+        class="phone-input"
+        id="phoneInput"
+        placeholder="(555) 000-0000"
+        maxlength="14"
+        inputmode="tel"
+        autocomplete="tel"
+      />
 
-    <div class="error-msg" id="errorMsg">Something went wrong — try again in a moment.</div>
+      <div class="consent-row">
+        <input type="checkbox" class="consent-checkbox" id="consentBox" />
+        <label class="consent-label" for="consentBox">
+          Check this box if you'd like to receive drink recommendations via SMS. Msg frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out, HELP for help. No opt-in data shared with third parties for marketing. &nbsp;
+          <a href="/privacy.html" target="_blank">Privacy</a> &nbsp;·&nbsp;
+          <a href="/terms.html" target="_blank">Terms</a>
+        </label>
+      </div>
+
+      <button class="btn btn-primary" id="submitBtn">Chat with Collin</button>
+
+      <div class="error-msg" id="errorMsg">Something went wrong — try again in a moment.</div>
+    </div>
   </div>
 
   <div class="success" id="successMsg">
@@ -375,6 +464,68 @@
 </div>
 
 <script>
+// ── DOB dropdowns ─────────────────────────────────────────────────────────────
+const dobMonth    = document.getElementById('dobMonth');
+const dobDay      = document.getElementById('dobDay');
+const dobYear     = document.getElementById('dobYear');
+const ageError    = document.getElementById('ageError');
+const phoneSection = document.getElementById('phoneSection');
+
+// Populate years
+const currentYear = new Date().getFullYear();
+for (let y = currentYear; y >= currentYear - 100; y--) {
+  const o = document.createElement('option');
+  o.value = y;
+  o.textContent = y;
+  dobYear.appendChild(o);
+}
+
+// Populate days based on month/year selection
+function populateDays() {
+  const m = parseInt(dobMonth.value) || 1;
+  const y = parseInt(dobYear.value) || 2000;
+  const selected = dobDay.value;
+  const daysInMonth = new Date(y, m, 0).getDate();
+
+  dobDay.innerHTML = '<option value="" disabled selected>Day</option>';
+  for (let d = 1; d <= daysInMonth; d++) {
+    const o = document.createElement('option');
+    o.value = d;
+    o.textContent = d;
+    if (String(d) === selected) o.selected = true;
+    dobDay.appendChild(o);
+  }
+}
+
+populateDays();
+
+dobMonth.addEventListener('change', () => { populateDays(); checkAge(); });
+dobYear.addEventListener('change',  () => { populateDays(); checkAge(); });
+dobDay.addEventListener('change', checkAge);
+
+function checkAge() {
+  const m = parseInt(dobMonth.value);
+  const d = parseInt(dobDay.value);
+  const y = parseInt(dobYear.value);
+
+  if (!m || !d || !y) return;
+
+  const today = new Date();
+  const dob   = new Date(y, m - 1, d);
+  let age = today.getFullYear() - dob.getFullYear();
+  const monthDiff = today.getMonth() - dob.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) age--;
+
+  if (age >= 21) {
+    ageError.classList.remove('visible');
+    phoneSection.classList.add('visible');
+  } else {
+    ageError.classList.add('visible');
+    phoneSection.classList.remove('visible');
+  }
+}
+
+// ── Phone + submit ────────────────────────────────────────────────────────────
 const phoneInput = document.getElementById('phoneInput');
 const consentBox = document.getElementById('consentBox');
 const submitBtn  = document.getElementById('submitBtn');
@@ -398,19 +549,13 @@ submitBtn.addEventListener('click', async () => {
   const digits = phoneInput.value.replace(/\D/g, '');
   const smsConsent = consentBox.checked;
 
-  // No phone, no consent — just go to chat
-  if (digits.length !== 10 && !smsConsent) {
-    window.location.href = '/collin.html';
-    return;
-  }
-
-  // No phone but consent checked — just go to chat (nothing to register)
+  // No phone — just go to chat
   if (digits.length !== 10) {
     window.location.href = '/collin.html';
     return;
   }
 
-  // Has phone — register regardless, send SMS only if opted in
+  // Has phone — register, send SMS only if opted in
   const phone = `+1${digits}`;
 
   submitBtn.disabled = true;
