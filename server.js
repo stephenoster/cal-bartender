@@ -1,6 +1,5 @@
 const express = require('express');
 const path = require('path');
-const twilio = require('twilio');
 const pool = require('./db');
 
 pool.on('error', (err) => {
@@ -258,115 +257,6 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
-// ── Twilio SMS webhook ──────────────────────────────────────────────────────
-app.post('/sms', async (req, res) => {
-  // Always respond to Twilio immediately to prevent timeouts
-  res.set('Content-Type', 'text/xml');
-  res.send('<Response></Response>');
-
-  const userPhone = req.body.From;
-  const incomingMessage = req.body.Body?.trim();
-
-  console.log(`=== /sms hit ===`);
-  console.log(`From: ${userPhone}`);
-  console.log(`Body: ${incomingMessage}`);
-  console.log(`ANTHROPIC KEY exists: ${!!process.env.ANTHROPIC_API_KEY}`);
-  console.log(`TWILIO SID exists: ${!!process.env.TWILIO_ACCOUNT_SID}`);
-  console.log(`TWILIO PHONE: ${process.env.TWILIO_PHONE_NUMBER}`);
-
-  if (!incomingMessage) {
-    console.log('No message body — exiting');
-    return;
-  }
-
-  // Initialize conversation history for new users
-  if (!conversations[userPhone]) {
-    conversations[userPhone] = [];
-  }
-
-  // Add user message to history
-  conversations[userPhone].push({ role: 'user', content: incomingMessage });
-
-  // Trim history if it gets too long
-  if (conversations[userPhone].length > MAX_HISTORY) {
-    conversations[userPhone] = conversations[userPhone].slice(-MAX_HISTORY);
-  }
-
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-
-  if (!accountSid || !authToken) {
-    console.error('Missing Twilio credentials — cannot send reply');
-    return;
-  }
-
-  const client = twilio(accountSid, authToken);
-
-  try {
-    console.log('Calling Anthropic...');
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-5',
-        max_tokens: 1000,
-        system: [
-          {
-            type: 'text',
-            text: COLLIN_SYSTEM_PROMPT,
-            cache_control: { type: 'ephemeral' },
-          },
-        ],
-        messages: conversations[userPhone],
-      }),
-    });
-
-    console.log(`Anthropic status: ${response.status}`);
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(`Anthropic error: ${JSON.stringify(data)}`);
-    }
-
-    const reply = data.content[0].text;
-    console.log(`Reply generated (${reply.length} chars)`);
-
-    // Add Collin's reply to history
-    conversations[userPhone].push({ role: 'assistant', content: reply });
-
-    // SMS has a 1600 char limit — split if needed
-    const chunks = reply.length <= 1600 ? [reply] : splitMessage(reply, 1580);
-
-    console.log(`Sending ${chunks.length} chunk(s) to ${userPhone}`);
-    for (const chunk of chunks) {
-      await client.messages.create({
-        body: chunk,
-        from: process.env.TWILIO_PHONE_NUMBER,
-        to: userPhone,
-      });
-    }
-    console.log('SMS sent successfully');
-
-  } catch (err) {
-    console.error('CAUGHT ERROR in /sms:', err.message);
-    console.error(err.stack);
-
-    try {
-      await client.messages.create({
-        body: "Hey — something went sideways on my end. Give me a second and try again.",
-        from: process.env.TWILIO_PHONE_NUMBER,
-        to: userPhone,
-      });
-    } catch (twilioErr) {
-      console.error('Failed to send error SMS:', twilioErr.message);
-    }
-  }
-});
-
 // Helper: split long messages at paragraph breaks
 function splitMessage(text, maxLength) {
   const chunks = [];
@@ -400,25 +290,39 @@ app.post('/join', async (req, res) => {
     return res.json({ ok: true });
   }
 
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken  = process.env.TWILIO_AUTH_TOKEN;
+  const telnyxApiKey = process.env.TELNYX_API_KEY;
+  const telnyxPhone  = process.env.TELNYX_PHONE_NUMBER;
 
-  if (!accountSid || !authToken) {
+  if (!telnyxApiKey || !telnyxPhone) {
     return res.status(500).json({ error: 'missing credentials' });
   }
 
-  const client = twilio(accountSid, authToken);
-
   try {
-    await client.messages.create({
-      body: "Hey, I'm Collin. Here you need a mixologist. What can I get ya?\n\nMsg & data rates may apply. Reply STOP to opt out, HELP for help.",
-      from: process.env.TWILIO_PHONE_NUMBER,
-      to: phone,
+    // This exact text is what's registered as the opt-in confirmation
+    // message in the 10DLC campaign — do not swap in in-character copy here.
+    // Collin's actual conversational opener should come as a follow-up send,
+    // not replace this one.
+    const sendRes = await fetch('https://api.telnyx.com/v2/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${telnyxApiKey}`,
+      },
+      body: JSON.stringify({
+        from: telnyxPhone,
+        to: phone,
+        text: "You have agreed to receive SMS messages from Collin Thomas. Msg freq may vary. Std msg & data rates apply. Reply STOP to opt out, HELP for help.",
+      }),
     });
+
+    const sendData = await sendRes.json();
+    if (!sendRes.ok) {
+      throw new Error(`Telnyx send error: ${JSON.stringify(sendData)}`);
+    }
 
     res.json({ ok: true });
   } catch (err) {
-    console.error('Error sending welcome SMS:', err);
+    console.error('Error sending opt-in confirmation SMS:', err.message);
     res.status(500).json({ error: 'failed to send' });
   }
 });
