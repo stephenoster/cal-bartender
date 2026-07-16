@@ -402,7 +402,13 @@ app.post('/sms-telnyx', async (req, res) => {
       throw new Error(`Anthropic error: ${JSON.stringify(data)}`);
     }
 
-    const reply = data.content[0].text;
+    const reply = data.content?.find(block => block.type === 'text')?.text;
+
+    if (!reply) {
+      console.error('Telnyx: no text block in Anthropic response:', JSON.stringify(data.content));
+      throw new Error('No text content returned by Anthropic');
+    }
+
     console.log(`Telnyx: reply generated (${reply.length} chars)`);
 
     conversations[userPhone].push({ role: 'assistant', content: reply });
