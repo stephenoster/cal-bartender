@@ -55,9 +55,7 @@ app.use((req, res, next) => {
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// In-memory conversation store (phone number → message history)
-// Resets on server restart — good enough for now, replaced by DB later
-const conversations = {};
+// How many past messages to pull from the conversations table per reply
 const MAX_HISTORY = 20;
 
 // ── ROTATING OBSESSION ──────────────────────────────────────────────────────
@@ -128,7 +126,7 @@ Make sure the 2-3 options have real variety — different techniques, different 
 ## DELIVERING THE FULL RECIPE
 Once they pick — by letter, name, or description — deliver the full recipe for that one drink only.
 
-Name — one line on what it is or what it riffs on and why it works.
+Name. One line on what it is or what it riffs on and why it works.
 
 Ingredients with measurements. Every ingredient, every time. Use ounces (2 oz, 3/4 oz), parts (1 part, 2 parts), or plain language (a bar spoon, a splash). Never list an ingredient without a quantity.
 
@@ -252,6 +250,13 @@ app.post('/api/chat', async (req, res) => {
       return res.status(response.status).json({ error: data });
     }
 
+    // Same marker Collin appends over SMS — strip it here too so it never
+    // shows up as literal text in the browser chat.
+    const textBlock = data.content?.find(block => block.type === 'text');
+    if (textBlock) {
+      textBlock.text = stripRecipeMarker(textBlock.text);
+    }
+
     res.json(data);
   } catch (err) {
     console.error(err);
@@ -323,6 +328,22 @@ function chunkReplyForSms(text) {
   return chunks;
 }
 
+// ── [RECIPE] marker handling ────────────────────────────────────────────────
+// Collin appends [RECIPE] to signal a full recipe was just delivered — it's
+// bookkeeping for us, not something he'd ever say. Nothing was stripping it
+// before this, so it was going out as literal text in the SMS.
+function stripRecipeMarker(text) {
+  return text.replace(/\s*\[RECIPE\]\s*$/, '').trimEnd();
+}
+
+// Drink names sit at the start of the first line, followed by a period,
+// colon, or dash into the description. Grab up to whichever comes first.
+function extractDrinkName(text) {
+  const firstLine = text.split('\n').map(l => l.trim()).find(l => l.length > 0) || '';
+  const match = firstLine.match(/^([^.:—-]+)/);
+  return (match ? match[1] : firstLine).trim();
+}
+
 // ── Web opt-in form endpoint ────────────────────────────────────────────────
 app.post('/join', async (req, res) => {
   const { phone, smsConsent } = req.body;
@@ -359,8 +380,6 @@ app.post('/join', async (req, res) => {
   try {
     // This exact text is what's registered as the opt-in confirmation
     // message in the 10DLC campaign — do not swap in in-character copy here.
-    // Collin's actual conversational opener should come as a follow-up send,
-    // not replace this one.
     const sendRes = await fetch('https://api.telnyx.com/v2/messages', {
       method: 'POST',
       headers: {
@@ -377,6 +396,40 @@ app.post('/join', async (req, res) => {
     const sendData = await sendRes.json();
     if (!sendRes.ok) {
       throw new Error(`Telnyx send error: ${JSON.stringify(sendData)}`);
+    }
+
+    // Collin's own opener, as a second send right after the required
+    // compliance text. Keeping it separate means the compliance wording
+    // stays exactly as registered, and this line can change freely.
+    const openerText = "Hey, I'm Collin. Tell me what you're working with, a spirit, a vibe, an occasion, and we'll find something worth making.";
+
+    const openerRes = await fetch('https://api.telnyx.com/v2/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${telnyxApiKey}`,
+      },
+      body: JSON.stringify({
+        from: telnyxPhone,
+        to: phone,
+        text: openerText,
+      }),
+    });
+
+    const openerData = await openerRes.json();
+    if (!openerRes.ok) {
+      console.error('Error sending Collin opener SMS:', JSON.stringify(openerData));
+    } else {
+      // Log it so it's in history when they text back, same as any
+      // other assistant turn.
+      try {
+        await pool.query(
+          `INSERT INTO conversations (phone_number, role, content) VALUES ($1, 'assistant', $2)`,
+          [phone, openerText]
+        );
+      } catch (err) {
+        console.error('Error saving opener to conversations:', err.message);
+      }
     }
 
     res.json({ ok: true });
@@ -412,15 +465,44 @@ app.post('/sms-telnyx', async (req, res) => {
     return;
   }
 
-  // Initialize conversation history for new users
-  if (!conversations[userPhone]) {
-    conversations[userPhone] = [];
+  // conversations.phone_number has an FK on users, so make sure a row
+  // exists for people who text in without ever hitting the /join form
+  try {
+    await pool.query(
+      `INSERT INTO users (phone_number, last_contacted)
+       VALUES ($1, now())
+       ON CONFLICT (phone_number) DO UPDATE SET last_contacted = now()`,
+      [userPhone]
+    );
+  } catch (err) {
+    console.error('Telnyx: error upserting user:', err.message);
   }
 
-  conversations[userPhone].push({ role: 'user', content: incomingMessage });
+  try {
+    await pool.query(
+      `INSERT INTO conversations (phone_number, role, content) VALUES ($1, 'user', $2)`,
+      [userPhone, incomingMessage]
+    );
+  } catch (err) {
+    console.error('Telnyx: error saving incoming message:', err.message);
+  }
 
-  if (conversations[userPhone].length > MAX_HISTORY) {
-    conversations[userPhone] = conversations[userPhone].slice(-MAX_HISTORY);
+  // Pull the last MAX_HISTORY messages, oldest first, for the model call
+  let history;
+  try {
+    const { rows } = await pool.query(
+      `SELECT role, content FROM (
+         SELECT role, content, created_at FROM conversations
+         WHERE phone_number = $1
+         ORDER BY created_at DESC
+         LIMIT $2
+       ) recent ORDER BY created_at ASC`,
+      [userPhone, MAX_HISTORY]
+    );
+    history = rows;
+  } catch (err) {
+    console.error('Telnyx: error loading history, falling back to this message only:', err.message);
+    history = [{ role: 'user', content: incomingMessage }];
   }
 
   const telnyxApiKey = process.env.TELNYX_API_KEY;
@@ -450,7 +532,7 @@ app.post('/sms-telnyx', async (req, res) => {
             cache_control: { type: 'ephemeral' },
           },
         ],
-        messages: conversations[userPhone],
+        messages: history,
       }),
     });
 
@@ -468,13 +550,35 @@ app.post('/sms-telnyx', async (req, res) => {
       throw new Error('No text content returned by Anthropic');
     }
 
-    console.log(`Telnyx: reply generated (${reply.length} chars)`);
+    const hasRecipe = reply.includes('[RECIPE]');
+    const cleanReply = stripRecipeMarker(reply);
 
-    // Keep the model's original text in history — sanitization is an SMS
-    // delivery concern only, not something Collin should see reflected back.
-    conversations[userPhone].push({ role: 'assistant', content: reply });
+    console.log(`Telnyx: reply generated (${cleanReply.length} chars)`);
 
-    const chunks = chunkReplyForSms(reply);
+    // Store the clean text — the marker is bookkeeping, not something
+    // Collin should see reflected back to him next turn.
+    try {
+      await pool.query(
+        `INSERT INTO conversations (phone_number, role, content) VALUES ($1, 'assistant', $2)`,
+        [userPhone, cleanReply]
+      );
+    } catch (err) {
+      console.error('Telnyx: error saving assistant reply:', err.message);
+    }
+
+    if (hasRecipe) {
+      const drinkName = extractDrinkName(cleanReply);
+      try {
+        await pool.query(
+          `INSERT INTO recipes (phone_number, drink_name) VALUES ($1, $2)`,
+          [userPhone, drinkName]
+        );
+      } catch (err) {
+        console.error('Telnyx: error logging recipe:', err.message);
+      }
+    }
+
+    const chunks = chunkReplyForSms(cleanReply);
 
     for (const chunk of chunks) {
       const sendRes = await fetch('https://api.telnyx.com/v2/messages', {
@@ -512,7 +616,7 @@ app.post('/sms-telnyx', async (req, res) => {
         body: JSON.stringify({
           from: telnyxPhone,
           to: userPhone,
-          text: "Hey — something went sideways on my end. Give me a second and try again.",
+          text: "Hey, something went sideways on my end. Give me a second and try again.",
         }),
       });
     } catch (telnyxErr) {

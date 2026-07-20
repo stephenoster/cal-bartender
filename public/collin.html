@@ -372,7 +372,7 @@ async function send() {
     typingRow.remove();
 
     const reply = data.content?.find(b => b.type === 'text')?.text
-      || "Hey. Something went sideways on my end — try again?";
+      || "Hey. Something went sideways on my end, try again?";
 
     history.push({ role: 'assistant', content: reply });
 
@@ -384,7 +384,7 @@ async function send() {
 
   } catch (err) {
     typingRow.remove();
-    addBubble("Hey. Something went sideways on my end — try again?", 'collin');
+    addBubble("Hey. Something went sideways on my end, try again?", 'collin');
   }
 
   messageInput.disabled = false;
