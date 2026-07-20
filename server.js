@@ -331,7 +331,18 @@ app.post('/join', async (req, res) => {
     return res.status(400).json({ error: 'invalid phone number' });
   }
 
-  // TODO: upsert user into DB here once database wiring is complete
+  try {
+    await pool.query(
+      `INSERT INTO users (phone_number, last_contacted)
+       VALUES ($1, now())
+       ON CONFLICT (phone_number) DO UPDATE SET last_contacted = now()`,
+      [phone]
+    );
+  } catch (err) {
+    // Don't block the signup on a DB hiccup — the SMS opt-in is the
+    // part the person is actually waiting on. Just log it.
+    console.error('Error upserting user on /join:', err.message);
+  }
 
   // If they didn't opt in to SMS, nothing else to do
   if (!smsConsent) {
