@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const pool = require('./db');
+const cityTimezones = require('city-timezones');
 
 pool.on('error', (err) => {
   console.error('Unexpected pg pool error:', err.message);
@@ -19,6 +20,10 @@ async function initDb() {
       last_contacted    TIMESTAMP,
       created_at        TIMESTAMP DEFAULT now()
     );
+
+    -- The users table above already exists in production, so new columns
+    -- need an explicit ALTER rather than relying on CREATE TABLE IF NOT EXISTS.
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_step TEXT;
 
     CREATE TABLE IF NOT EXISTS recipes (
       id              SERIAL PRIMARY KEY,
@@ -237,7 +242,7 @@ app.post('/api/chat', async (req, res) => {
           {
             type: 'text',
             text: COLLIN_SYSTEM_PROMPT,
-            cache_control: { type: 'ephemeral' },
+            cache_control: { type: 'ephemeral', ttl: '1h' },
           },
         ],
         messages,
@@ -342,6 +347,248 @@ function extractDrinkName(text) {
   const firstLine = text.split('\n').map(l => l.trim()).find(l => l.length > 0) || '';
   const match = firstLine.match(/^([^.:—-]+)/);
   return (match ? match[1] : firstLine).trim();
+}
+
+// ── Onboarding ───────────────────────────────────────────────────────────────
+// Four questions, collected as a fixed sequence once someone's had a full
+// recipe: name, bar type, favorite drink, city. None of this goes through
+// Collin/Anthropic — it's a plain state machine, canned text at each step.
+
+// Shared send helper for onboarding messages specifically. The other SMS
+// send sites (join, opener, HELP, Collin's replies) are left as they are —
+// this isn't a refactor of those, just avoiding four more copies of the
+// same fetch call for the new onboarding steps.
+async function sendSms(to, text) {
+  const telnyxApiKey = process.env.TELNYX_API_KEY;
+  const telnyxPhone = process.env.TELNYX_PHONE_NUMBER;
+
+  if (!telnyxApiKey || !telnyxPhone) {
+    console.error('Onboarding: missing Telnyx credentials, cannot send SMS');
+    return false;
+  }
+
+  try {
+    const res = await fetch('https://api.telnyx.com/v2/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${telnyxApiKey}`,
+      },
+      body: JSON.stringify({ from: telnyxPhone, to, text }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      console.error('Onboarding: Telnyx send error:', JSON.stringify(data));
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('Onboarding: Telnyx send exception:', err.message);
+    return false;
+  }
+}
+
+// Best-effort city → timezone lookup. US cocktail hobbyists are the whole
+// audience here, so US matches are preferred over same-named cities
+// elsewhere, and the most populous match wins any remaining ambiguity
+// (see: Portland, of which there are several). Never blocks onboarding —
+// if nothing resolves, timezone just stays null.
+function resolveTimezone(cityText) {
+  let results;
+  try {
+    results = cityTimezones.lookupViaCity(cityText);
+  } catch (err) {
+    console.error('Onboarding: timezone lookup error:', err.message);
+    return null;
+  }
+
+  if (!results || results.length === 0) return null;
+
+  const usResults = results.filter(r => r.iso2 === 'US');
+  const candidates = usResults.length > 0 ? usResults : results;
+  candidates.sort((a, b) => (b.pop || 0) - (a.pop || 0));
+
+  return candidates[0].timezone || null;
+}
+
+// Fires once, ONBOARDING_DELAY_MS after a recipe is delivered, for anyone
+// who hasn't been onboarded yet. Deliberately simple (Option B): unconditional
+// timer, no check for whether they're still mid-conversation. The in-memory
+// map just guards against scheduling a second timer if another recipe lands
+// before the first one fires.
+const ONBOARDING_DELAY_MS = 5 * 60 * 1000;
+const onboardingTimers = new Map();
+
+function scheduleOnboardingPrompt(userPhone) {
+  if (onboardingTimers.has(userPhone)) return;
+
+  const timer = setTimeout(async () => {
+    onboardingTimers.delete(userPhone);
+
+    try {
+      const { rows } = await pool.query(
+        `SELECT onboarding_done, onboarding_step FROM users WHERE phone_number = $1`,
+        [userPhone]
+      );
+      const user = rows[0];
+
+      // Skip if they've since finished onboarding, or are already mid-flow
+      // (a second recipe delivered while this timer was still pending).
+      if (!user || user.onboarding_done || user.onboarding_step) {
+        return;
+      }
+
+      const promptText = "Hey real quick, I want to save your bar so next time I'm not starting from scratch. Four quick questions. You in?";
+
+      const sent = await sendSms(userPhone, promptText);
+      if (!sent) return;
+
+      await pool.query(
+        `UPDATE users SET onboarding_step = 'awaiting_consent' WHERE phone_number = $1`,
+        [userPhone]
+      );
+      await pool.query(
+        `INSERT INTO conversations (phone_number, role, content) VALUES ($1, 'assistant', $2)`,
+        [userPhone, promptText]
+      );
+    } catch (err) {
+      console.error('Onboarding: error firing prompt timer:', err.message);
+    }
+  }, ONBOARDING_DELAY_MS);
+
+  onboardingTimers.set(userPhone, timer);
+}
+
+const NEGATIVE_RESPONSE = /^(no|nah|nope|not now|not right now|later|skip|no thanks|nvm|never ?mind)\b/i;
+
+// Runs on every inbound message. Returns true if this message was consumed
+// by the onboarding flow (caller should stop, not forward to Collin), false
+// if there's no onboarding in progress for this person.
+async function handleOnboardingReply(userPhone, incomingMessage) {
+  let user;
+  try {
+    const { rows } = await pool.query(
+      `SELECT onboarding_done, onboarding_step FROM users WHERE phone_number = $1`,
+      [userPhone]
+    );
+    user = rows[0];
+  } catch (err) {
+    console.error('Onboarding: error reading user state:', err.message);
+    return false;
+  }
+
+  if (!user || user.onboarding_done || !user.onboarding_step) {
+    return false;
+  }
+
+  const step = user.onboarding_step;
+
+  // Every branch does the same three things: update the row, send the
+  // next message, log that message to conversations.
+  const advance = async (updateSql, updateValues, nextText) => {
+    try {
+      await pool.query(updateSql, updateValues);
+    } catch (err) {
+      console.error(`Onboarding: error updating user at step '${step}':`, err.message);
+    }
+    await sendSms(userPhone, nextText);
+    try {
+      await pool.query(
+        `INSERT INTO conversations (phone_number, role, content) VALUES ($1, 'assistant', $2)`,
+        [userPhone, nextText]
+      );
+    } catch (err) {
+      console.error('Onboarding: error logging assistant turn:', err.message);
+    }
+  };
+
+  if (step === 'awaiting_consent') {
+    if (NEGATIVE_RESPONSE.test(incomingMessage.trim())) {
+      await advance(
+        `UPDATE users SET onboarding_step = NULL WHERE phone_number = $1`,
+        [userPhone],
+        "No worries, another time then."
+      );
+      return true;
+    }
+
+    await advance(
+      `UPDATE users SET onboarding_step = 'name' WHERE phone_number = $1`,
+      [userPhone],
+      "Nice. Real quick, what's your name?"
+    );
+    return true;
+  }
+
+  if (step === 'name') {
+    const name = incomingMessage.trim().slice(0, 100);
+    await advance(
+      `UPDATE users SET name = $2, onboarding_step = 'bar_type' WHERE phone_number = $1`,
+      [userPhone, name],
+      `${name}. Got it. What kinda bar are we working with?\n\nA. Japanese whisky, small-batch amaro, Luxardo cherries, perfect clear ice\nB. Good bourbon, decent tequila, real bitters, cold vermouth, fresh citrus always\nC. Solid well spirits, a few interesting bottles, building the collection\nD. Whatever looked good at the store, kind of a mess but there's good stuff in there`
+    );
+    return true;
+  }
+
+  if (step === 'bar_type') {
+    const letterMatch = incomingMessage.trim().match(/\b([A-Da-d])\b/);
+    const barType = letterMatch ? letterMatch[1].toUpperCase() : incomingMessage.trim().slice(0, 50);
+    await advance(
+      `UPDATE users SET bar_type = $2, onboarding_step = 'favorite_drink' WHERE phone_number = $1`,
+      [userPhone, barType],
+      "Almost done. What's the last drink you made or ordered that you'd make again?"
+    );
+    return true;
+  }
+
+  if (step === 'favorite_drink') {
+    const drink = incomingMessage.trim().slice(0, 200);
+    await advance(
+      `UPDATE users SET favorite_drink = $2, onboarding_step = 'city' WHERE phone_number = $1`,
+      [userPhone, drink],
+      "Last thing, what city are you in?"
+    );
+    return true;
+  }
+
+  if (step === 'city') {
+    const city = incomingMessage.trim().slice(0, 100);
+    const timezone = resolveTimezone(city);
+
+    try {
+      await pool.query(
+        `UPDATE users
+         SET city = $2, timezone = $3, onboarding_step = NULL, onboarding_done = true
+         WHERE phone_number = $1`,
+        [userPhone, city, timezone]
+      );
+    } catch (err) {
+      console.error('Onboarding: error finishing onboarding:', err.message);
+    }
+
+    const closeText = `Got it. Just want to make sure I'm not texting ${city} at midnight. Next time you text, I'll already know your bar.`;
+    await sendSms(userPhone, closeText);
+    try {
+      await pool.query(
+        `INSERT INTO conversations (phone_number, role, content) VALUES ($1, 'assistant', $2)`,
+        [userPhone, closeText]
+      );
+    } catch (err) {
+      console.error('Onboarding: error logging close message:', err.message);
+    }
+
+    return true;
+  }
+
+  // Unknown step value — bail out of onboarding rather than get someone
+  // stuck forever with no way to reach Collin.
+  console.error(`Onboarding: unrecognized step '${step}' for a user, clearing`);
+  try {
+    await pool.query(`UPDATE users SET onboarding_step = NULL WHERE phone_number = $1`, [userPhone]);
+  } catch (err) {
+    console.error('Onboarding: error clearing unknown step:', err.message);
+  }
+  return false;
 }
 
 // ── Web opt-in form endpoint ────────────────────────────────────────────────
@@ -478,6 +725,39 @@ app.post('/sms-telnyx', async (req, res) => {
     console.error('Telnyx: error upserting user:', err.message);
   }
 
+  // HELP is handled here directly, not by Collin — this is required
+  // compliance copy, not something he'd say in his own voice. Doesn't
+  // touch conversations or call Anthropic at all.
+  if (incomingMessage.toUpperCase() === 'HELP') {
+    const telnyxApiKey = process.env.TELNYX_API_KEY;
+    const telnyxPhone = process.env.TELNYX_PHONE_NUMBER;
+
+    if (!telnyxApiKey || !telnyxPhone) {
+      console.error('Telnyx: missing credentials, cannot send HELP response');
+      return;
+    }
+
+    try {
+      await fetch('https://api.telnyx.com/v2/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${telnyxApiKey}`,
+        },
+        body: JSON.stringify({
+          from: telnyxPhone,
+          to: userPhone,
+          text: "Collin Thomas: For help call +17048903868. Msg frequency varies. Msg & data rates may apply. Reply STOP to opt out.",
+        }),
+      });
+      console.log('Telnyx: HELP response sent');
+    } catch (err) {
+      console.error('Telnyx: error sending HELP response:', err.message);
+    }
+
+    return;
+  }
+
   try {
     await pool.query(
       `INSERT INTO conversations (phone_number, role, content) VALUES ($1, 'user', $2)`,
@@ -485,6 +765,17 @@ app.post('/sms-telnyx', async (req, res) => {
     );
   } catch (err) {
     console.error('Telnyx: error saving incoming message:', err.message);
+  }
+
+  // If this person is mid-onboarding, their reply belongs to that state
+  // machine, not to Collin. Handles the send and DB update itself.
+  try {
+    const handledByOnboarding = await handleOnboardingReply(userPhone, incomingMessage);
+    if (handledByOnboarding) {
+      return;
+    }
+  } catch (err) {
+    console.error('Onboarding: unexpected error, falling through to Collin:', err.message);
   }
 
   // Pull the last MAX_HISTORY messages, oldest first, for the model call
@@ -529,7 +820,7 @@ app.post('/sms-telnyx', async (req, res) => {
           {
             type: 'text',
             text: COLLIN_SYSTEM_PROMPT,
-            cache_control: { type: 'ephemeral' },
+            cache_control: { type: 'ephemeral', ttl: '1h' },
           },
         ],
         messages: history,
@@ -576,6 +867,10 @@ app.post('/sms-telnyx', async (req, res) => {
       } catch (err) {
         console.error('Telnyx: error logging recipe:', err.message);
       }
+
+      // scheduleOnboardingPrompt no-ops on its own if this person is
+      // already onboarded or already mid-flow.
+      scheduleOnboardingPrompt(userPhone);
     }
 
     const chunks = chunkReplyForSms(cleanReply);
