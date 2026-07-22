@@ -411,55 +411,11 @@ function resolveTimezone(cityText) {
   return candidates[0].timezone || null;
 }
 
-// Fires once, ONBOARDING_DELAY_MS after a recipe is delivered, for anyone
-// who hasn't been onboarded yet. Deliberately simple (Option B): unconditional
-// timer, no check for whether they're still mid-conversation. The in-memory
-// map just guards against scheduling a second timer if another recipe lands
-// before the first one fires.
-const ONBOARDING_DELAY_MS = 5 * 60 * 1000;
-const onboardingTimers = new Map();
-
-function scheduleOnboardingPrompt(userPhone) {
-  if (onboardingTimers.has(userPhone)) return;
-
-  const timer = setTimeout(async () => {
-    onboardingTimers.delete(userPhone);
-
-    try {
-      const { rows } = await pool.query(
-        `SELECT onboarding_done, onboarding_step FROM users WHERE phone_number = $1`,
-        [userPhone]
-      );
-      const user = rows[0];
-
-      // Skip if they've since finished onboarding, or are already mid-flow
-      // (a second recipe delivered while this timer was still pending).
-      if (!user || user.onboarding_done || user.onboarding_step) {
-        return;
-      }
-
-      const promptText = "Hey real quick, I want to save your bar so next time I'm not starting from scratch. Four quick questions. You in?";
-
-      const sent = await sendSms(userPhone, promptText);
-      if (!sent) return;
-
-      await pool.query(
-        `UPDATE users SET onboarding_step = 'awaiting_consent' WHERE phone_number = $1`,
-        [userPhone]
-      );
-      await pool.query(
-        `INSERT INTO conversations (phone_number, role, content) VALUES ($1, 'assistant', $2)`,
-        [userPhone, promptText]
-      );
-    } catch (err) {
-      console.error('Onboarding: error firing prompt timer:', err.message);
-    }
-  }, ONBOARDING_DELAY_MS);
-
-  onboardingTimers.set(userPhone, timer);
-}
-
-const NEGATIVE_RESPONSE = /^(no|nah|nope|not now|not right now|later|skip|no thanks|nvm|never ?mind)\b/i;
+// Onboarding now starts on someone's very first-ever contact, not after a
+// recipe, so there's no delayed timer anymore. The opener message itself
+// (sent from /join or on a cold text-in — see below) IS the onboarding
+// trigger and asks for the name directly, so there's no separate consent
+// step either.
 
 // Runs on every inbound message. Returns true if this message was consumed
 // by the onboarding flow (caller should stop, not forward to Collin), false
@@ -502,30 +458,12 @@ async function handleOnboardingReply(userPhone, incomingMessage) {
     }
   };
 
-  if (step === 'awaiting_consent') {
-    if (NEGATIVE_RESPONSE.test(incomingMessage.trim())) {
-      await advance(
-        `UPDATE users SET onboarding_step = NULL WHERE phone_number = $1`,
-        [userPhone],
-        "No worries, another time then."
-      );
-      return true;
-    }
-
-    await advance(
-      `UPDATE users SET onboarding_step = 'name' WHERE phone_number = $1`,
-      [userPhone],
-      "Nice. Real quick, what's your name?"
-    );
-    return true;
-  }
-
   if (step === 'name') {
     const name = incomingMessage.trim().slice(0, 100);
     await advance(
       `UPDATE users SET name = $2, onboarding_step = 'bar_type' WHERE phone_number = $1`,
       [userPhone, name],
-      `${name}. Got it. What kinda bar are we working with?\n\nA. Japanese whisky, small-batch amaro, Luxardo cherries, perfect clear ice\nB. Good bourbon, decent tequila, real bitters, cold vermouth, fresh citrus always\nC. Solid well spirits, a few interesting bottles, building the collection\nD. Whatever looked good at the store, kind of a mess but there's good stuff in there`
+      `${name} Got it. What kinda bar are we working with?\n\nA. Japanese whisky, small-batch amaro, Luxardo cherries, perfect clear ice\nB. Good bourbon, decent tequila, real bitters, cold vermouth, fresh citrus always\nC. Solid well spirits, a few interesting bottles, building the collection\nD. Whatever looked good at the store, kind of a mess but there's good stuff in there`
     );
     return true;
   }
@@ -533,11 +471,42 @@ async function handleOnboardingReply(userPhone, incomingMessage) {
   if (step === 'bar_type') {
     const letterMatch = incomingMessage.trim().match(/\b([A-Da-d])\b/);
     const barType = letterMatch ? letterMatch[1].toUpperCase() : incomingMessage.trim().slice(0, 50);
-    await advance(
-      `UPDATE users SET bar_type = $2, onboarding_step = 'favorite_drink' WHERE phone_number = $1`,
-      [userPhone, barType],
-      "Almost done. What's the last drink you made or ordered that you'd make again?"
-    );
+
+    try {
+      await pool.query(
+        `UPDATE users SET bar_type = $2, onboarding_step = 'favorite_drink' WHERE phone_number = $1`,
+        [userPhone, barType]
+      );
+    } catch (err) {
+      console.error("Onboarding: error updating user at step 'bar_type':", err.message);
+    }
+
+    // Two messages here, not one — the store tip, then the actual next
+    // question. Logged as two separate conversation turns since that's
+    // what actually went out over SMS.
+    const storeTipText = "Nice. Same goes for the store, by the way, text me if you're staring at a shelf trying to decide.";
+    const drinkQuestionText = "Almost done. What's the last drink you made or ordered that you'd make again?";
+
+    await sendSms(userPhone, storeTipText);
+    try {
+      await pool.query(
+        `INSERT INTO conversations (phone_number, role, content) VALUES ($1, 'assistant', $2)`,
+        [userPhone, storeTipText]
+      );
+    } catch (err) {
+      console.error('Onboarding: error logging store tip:', err.message);
+    }
+
+    await sendSms(userPhone, drinkQuestionText);
+    try {
+      await pool.query(
+        `INSERT INTO conversations (phone_number, role, content) VALUES ($1, 'assistant', $2)`,
+        [userPhone, drinkQuestionText]
+      );
+    } catch (err) {
+      console.error('Onboarding: error logging drink question:', err.message);
+    }
+
     return true;
   }
 
@@ -566,7 +535,7 @@ async function handleOnboardingReply(userPhone, incomingMessage) {
       console.error('Onboarding: error finishing onboarding:', err.message);
     }
 
-    const closeText = `Got it. Just want to make sure I'm not texting ${city} at midnight. Next time you text, I'll already know your bar.`;
+    const closeText = `Got it. Just want to make sure I'm not texting ${city} at midnight. Next time you text, I'll already know your bar. But let's get started. What are we working with, what's the mood, let's go.`;
     await sendSms(userPhone, closeText);
     try {
       await pool.query(
@@ -589,6 +558,33 @@ async function handleOnboardingReply(userPhone, incomingMessage) {
     console.error('Onboarding: error clearing unknown step:', err.message);
   }
   return false;
+}
+
+// The fixed opener/trigger message. Sent from /join right after the
+// compliance text, and sent as the very first reply to anyone who texts
+// the number cold. Doubles as Q1 — it ends by asking for the name
+// directly, so answering it puts someone straight into onboarding_step
+// = 'name'.
+const ONBOARDING_OPENER = "Hey, I'm Collin. I've tended bar for years, now I'm doing it over text. I make cocktail recs based on what's actually in your bar and what you like, not generic stuff. What's your name?";
+
+async function sendOnboardingOpener(userPhone) {
+  await sendSms(userPhone, ONBOARDING_OPENER);
+  try {
+    await pool.query(
+      `UPDATE users SET onboarding_step = 'name' WHERE phone_number = $1`,
+      [userPhone]
+    );
+  } catch (err) {
+    console.error('Onboarding: error setting initial step:', err.message);
+  }
+  try {
+    await pool.query(
+      `INSERT INTO conversations (phone_number, role, content) VALUES ($1, 'assistant', $2)`,
+      [userPhone, ONBOARDING_OPENER]
+    );
+  } catch (err) {
+    console.error('Onboarding: error logging opener:', err.message);
+  }
 }
 
 // ── Web opt-in form endpoint ────────────────────────────────────────────────
@@ -648,36 +644,9 @@ app.post('/join', async (req, res) => {
     // Collin's own opener, as a second send right after the required
     // compliance text. Keeping it separate means the compliance wording
     // stays exactly as registered, and this line can change freely.
-    const openerText = "Hey, I'm Collin. Tell me what you're working with, a spirit, a vibe, an occasion, and we'll find something worth making.";
-
-    const openerRes = await fetch('https://api.telnyx.com/v2/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${telnyxApiKey}`,
-      },
-      body: JSON.stringify({
-        from: telnyxPhone,
-        to: phone,
-        text: openerText,
-      }),
-    });
-
-    const openerData = await openerRes.json();
-    if (!openerRes.ok) {
-      console.error('Error sending Collin opener SMS:', JSON.stringify(openerData));
-    } else {
-      // Log it so it's in history when they text back, same as any
-      // other assistant turn.
-      try {
-        await pool.query(
-          `INSERT INTO conversations (phone_number, role, content) VALUES ($1, 'assistant', $2)`,
-          [phone, openerText]
-        );
-      } catch (err) {
-        console.error('Error saving opener to conversations:', err.message);
-      }
-    }
+    // This is also the onboarding trigger — it doubles as Q1 and sets
+    // onboarding_step = 'name' so their next reply routes correctly.
+    await sendOnboardingOpener(phone);
 
     res.json({ ok: true });
   } catch (err) {
@@ -710,6 +679,19 @@ app.post('/sms-telnyx', async (req, res) => {
   if (!incomingMessage || !userPhone) {
     console.log('Telnyx: missing phone or message body — exiting');
     return;
+  }
+
+  // Check before upserting, so we know whether this is truly this
+  // person's first-ever contact (web form or cold text-in either way).
+  let isNewUser = false;
+  try {
+    const { rows } = await pool.query(
+      `SELECT phone_number FROM users WHERE phone_number = $1`,
+      [userPhone]
+    );
+    isNewUser = rows.length === 0;
+  } catch (err) {
+    console.error('Telnyx: error checking for existing user:', err.message);
   }
 
   // conversations.phone_number has an FK on users, so make sure a row
@@ -765,6 +747,15 @@ app.post('/sms-telnyx', async (req, res) => {
     );
   } catch (err) {
     console.error('Telnyx: error saving incoming message:', err.message);
+  }
+
+  // A cold text-in — someone who never touched the web form. Whatever
+  // they said first isn't treated as an answer to anything, it just
+  // triggers the same opener /join sends, which sets onboarding_step
+  // = 'name' so their *next* reply lands correctly.
+  if (isNewUser) {
+    await sendOnboardingOpener(userPhone);
+    return;
   }
 
   // If this person is mid-onboarding, their reply belongs to that state
@@ -867,10 +858,6 @@ app.post('/sms-telnyx', async (req, res) => {
       } catch (err) {
         console.error('Telnyx: error logging recipe:', err.message);
       }
-
-      // scheduleOnboardingPrompt no-ops on its own if this person is
-      // already onboarded or already mid-flow.
-      scheduleOnboardingPrompt(userPhone);
     }
 
     const chunks = chunkReplyForSms(cleanReply);
