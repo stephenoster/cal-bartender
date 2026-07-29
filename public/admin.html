@@ -160,6 +160,40 @@
       color: rgba(244,214,204,0.6);
     }
 
+    #dResponses {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(244,214,204,0.1);
+    }
+
+    .d-responses-label {
+      font-size: 0.72rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--iron);
+      margin-bottom: 10px;
+    }
+
+    .d-response-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 0.82rem;
+      color: rgba(244,214,204,0.7);
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .d-response-text {
+      flex: 1;
+    }
+
+    .d-response-count {
+      flex-shrink: 0;
+      font-family: 'DM Mono', monospace;
+      color: rgba(244,214,204,0.45);
+    }
+
     #loadError {
       display: none;
       font-size: 0.85rem;
@@ -194,6 +228,7 @@
       <section>
         <h2>Bar type</h2>
         <div id="barTypeChart"></div>
+        <div id="dResponses"></div>
       </section>
 
       <section>
@@ -242,10 +277,37 @@
       });
     }
 
+    function renderDResponses(container, dResponses) {
+      container.innerHTML = '';
+      if (!dResponses || dResponses.length === 0) return;
+
+      const label = document.createElement('div');
+      label.className = 'd-responses-label';
+      label.textContent = 'D includes these actual responses';
+      container.appendChild(label);
+
+      dResponses.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'd-response-row';
+        row.innerHTML = `
+          <div class="d-response-text">${escapeHtml(item.response)}</div>
+          <div class="d-response-count">${item.count}</div>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
     function renderDashboard(data) {
       document.getElementById('totalNumber').textContent = data.total;
 
       renderBars(document.getElementById('barTypeChart'), data.barTypes, 'bar_type');
+      renderDResponses(document.getElementById('dResponses'), data.dResponses);
 
       const onboardingRows = data.onboarding.map(row => ({
         label: row.onboarding_done ? 'completed' : 'in progress',

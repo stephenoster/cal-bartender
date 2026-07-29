@@ -919,12 +919,41 @@ app.get('/admin/api/stats', async (req, res) => {
     const totalResult = await pool.query('SELECT COUNT(*) FROM users');
     const total = parseInt(totalResult.rows[0].count, 10);
 
-    const barTypeResult = await pool.query(`
-      SELECT COALESCE(bar_type, 'not set') AS bar_type, COUNT(*) AS count
+    // Raw counts per distinct value, still grouped in SQL — the bucketing
+    // into A/B/C/D happens after, since "is this a clean A/B/C" isn't a
+    // clean SQL condition once you account for whitespace/case.
+    const rawBarTypeResult = await pool.query(`
+      SELECT bar_type, COUNT(*) AS count
       FROM users
+      WHERE bar_type IS NOT NULL
       GROUP BY bar_type
-      ORDER BY count DESC
     `);
+
+    const buckets = { A: 0, B: 0, C: 0, D: 0 };
+    const dResponses = [];
+
+    for (const row of rawBarTypeResult.rows) {
+      const raw = row.bar_type;
+      const count = parseInt(row.count, 10);
+      const normalized = raw.trim().toUpperCase();
+
+      if (normalized === 'A' || normalized === 'B' || normalized === 'C') {
+        buckets[normalized] += count;
+      } else {
+        // Anything that isn't a clean A/B/C answer, someone's own words,
+        // a typo, whatever, gets grouped as D but the actual text stays
+        // attached so it isn't just absorbed into a number.
+        buckets.D += count;
+        dResponses.push({ response: raw, count });
+      }
+    }
+
+    dResponses.sort((a, b) => b.count - a.count);
+
+    const barTypes = ['A', 'B', 'C', 'D'].map(letter => ({
+      bar_type: letter,
+      count: buckets[letter],
+    }));
 
     const onboardingResult = await pool.query(`
       SELECT onboarding_done, COUNT(*) AS count
@@ -934,7 +963,8 @@ app.get('/admin/api/stats', async (req, res) => {
 
     res.json({
       total,
-      barTypes: barTypeResult.rows,
+      barTypes,
+      dResponses,
       onboarding: onboardingResult.rows,
     });
   } catch (err) {
