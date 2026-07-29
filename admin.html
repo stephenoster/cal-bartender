@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — Collin Thomas</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --gunmetal: #32373B;
+      --iron: #4A5859;
+      --almond: #F4D6CC;
+      --honey: #F4B860;
+      --brick: #C83E4D;
+      --off-white: #F9F4F0;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background-color: var(--gunmetal);
+      color: var(--almond);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--brick), var(--honey));
+      z-index: 10;
+    }
+
+    main {
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 64px 24px 100px;
+    }
+
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.8rem;
+      font-weight: 600;
+      color: var(--off-white);
+      margin-bottom: 40px;
+    }
+
+    /* ── Gate ── */
+    #gate {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-width: 320px;
+    }
+
+    #gate input {
+      padding: 14px 16px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(244,214,204,0.2);
+      border-radius: 10px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.95rem;
+      color: var(--almond);
+      outline: none;
+    }
+
+    #gate input:focus { border-color: rgba(244,184,96,0.5); }
+
+    #gate button {
+      padding: 14px 20px;
+      background: var(--honey);
+      color: var(--gunmetal);
+      border: none;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    #gateError {
+      display: none;
+      font-size: 0.8rem;
+      color: var(--brick);
+    }
+
+    #gateError.visible { display: block; }
+
+    /* ── Dashboard ── */
+    #dashboard { display: none; }
+    #dashboard.visible { display: block; }
+
+    .total-card {
+      margin-bottom: 40px;
+    }
+
+    .total-label {
+      font-size: 0.7rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--honey);
+      margin-bottom: 8px;
+    }
+
+    .total-number {
+      font-family: 'Playfair Display', serif;
+      font-size: 3.4rem;
+      font-weight: 600;
+      color: var(--off-white);
+      line-height: 1;
+    }
+
+    section { margin-bottom: 40px; }
+
+    h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--honey);
+      margin-bottom: 16px;
+    }
+
+    .bar-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .bar-name {
+      width: 90px;
+      flex-shrink: 0;
+      font-size: 0.82rem;
+      color: rgba(244,214,204,0.75);
+      text-transform: capitalize;
+    }
+
+    .bar-track {
+      flex: 1;
+      height: 10px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--brick), var(--honey));
+      border-radius: 6px;
+    }
+
+    .bar-count {
+      width: 32px;
+      flex-shrink: 0;
+      text-align: right;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.82rem;
+      color: rgba(244,214,204,0.6);
+    }
+
+    #loadError {
+      display: none;
+      font-size: 0.85rem;
+      color: var(--brick);
+    }
+
+    #loadError.visible { display: block; }
+
+    footer {
+      font-size: 0.72rem;
+      color: var(--iron);
+    }
+  </style>
+</head>
+<body>
+
+  <main>
+    <h1>Collin — Admin</h1>
+
+    <div id="gate">
+      <input type="password" id="tokenInput" placeholder="Admin token" autocomplete="off" />
+      <button id="unlockBtn">Unlock</button>
+      <div id="gateError">Wrong token, or ADMIN_TOKEN isn't set on the server.</div>
+    </div>
+
+    <div id="dashboard">
+      <div class="total-card">
+        <div class="total-label">Total signups</div>
+        <div class="total-number" id="totalNumber">—</div>
+      </div>
+
+      <section>
+        <h2>Bar type</h2>
+        <div id="barTypeChart"></div>
+      </section>
+
+      <section>
+        <h2>Onboarding</h2>
+        <div id="onboardingChart"></div>
+      </section>
+
+      <div id="loadError"></div>
+    </div>
+
+    <footer>Data pulled live from the users table.</footer>
+  </main>
+
+  <script>
+    const gate = document.getElementById('gate');
+    const dashboard = document.getElementById('dashboard');
+    const tokenInput = document.getElementById('tokenInput');
+    const unlockBtn = document.getElementById('unlockBtn');
+    const gateError = document.getElementById('gateError');
+    const loadError = document.getElementById('loadError');
+
+    async function fetchStats(token) {
+      const res = await fetch('/admin/api/stats', {
+        headers: { 'x-admin-token': token }
+      });
+      if (!res.ok) throw new Error('unauthorized');
+      return res.json();
+    }
+
+    function renderBars(container, rows, labelKey) {
+      container.innerHTML = '';
+      const max = Math.max(...rows.map(r => parseInt(r.count, 10)), 1);
+
+      rows.forEach(row => {
+        const count = parseInt(row.count, 10);
+        const pct = Math.round((count / max) * 100);
+
+        const rowEl = document.createElement('div');
+        rowEl.className = 'bar-row';
+        rowEl.innerHTML = `
+          <div class="bar-name">${row[labelKey]}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+          <div class="bar-count">${count}</div>
+        `;
+        container.appendChild(rowEl);
+      });
+    }
+
+    function renderDashboard(data) {
+      document.getElementById('totalNumber').textContent = data.total;
+
+      renderBars(document.getElementById('barTypeChart'), data.barTypes, 'bar_type');
+
+      const onboardingRows = data.onboarding.map(row => ({
+        label: row.onboarding_done ? 'completed' : 'in progress',
+        count: row.count
+      }));
+      renderBars(document.getElementById('onboardingChart'), onboardingRows, 'label');
+    }
+
+    async function tryUnlock() {
+      const token = tokenInput.value.trim();
+      if (!token) return;
+
+      gateError.classList.remove('visible');
+      unlockBtn.disabled = true;
+      unlockBtn.textContent = 'Checking...';
+
+      try {
+        const data = await fetchStats(token);
+        sessionStorage.setItem('collinAdminToken', token);
+        gate.style.display = 'none';
+        dashboard.classList.add('visible');
+        renderDashboard(data);
+      } catch (err) {
+        gateError.classList.add('visible');
+        unlockBtn.disabled = false;
+        unlockBtn.textContent = 'Unlock';
+      }
+    }
+
+    unlockBtn.addEventListener('click', tryUnlock);
+    tokenInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') tryUnlock();
+    });
+
+    // Auto-unlock if a token's already stored for this tab
+    const storedToken = sessionStorage.getItem('collinAdminToken');
+    if (storedToken) {
+      tokenInput.value = storedToken;
+      tryUnlock();
+    }
+  </script>
+
+</body>
+</html>

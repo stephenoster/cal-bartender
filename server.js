@@ -907,6 +907,42 @@ app.post('/sms-telnyx', async (req, res) => {
   }
 });
 
+// ── Admin stats endpoint ────────────────────────────────────────────────────
+app.get('/admin/api/stats', async (req, res) => {
+  const token = req.headers['x-admin-token'] || req.query.token;
+
+  if (!process.env.ADMIN_TOKEN || token !== process.env.ADMIN_TOKEN) {
+    return res.status(401).json({ error: 'unauthorized' });
+  }
+
+  try {
+    const totalResult = await pool.query('SELECT COUNT(*) FROM users');
+    const total = parseInt(totalResult.rows[0].count, 10);
+
+    const barTypeResult = await pool.query(`
+      SELECT COALESCE(bar_type, 'not set') AS bar_type, COUNT(*) AS count
+      FROM users
+      GROUP BY bar_type
+      ORDER BY count DESC
+    `);
+
+    const onboardingResult = await pool.query(`
+      SELECT onboarding_done, COUNT(*) AS count
+      FROM users
+      GROUP BY onboarding_done
+    `);
+
+    res.json({
+      total,
+      barTypes: barTypeResult.rows,
+      onboarding: onboardingResult.rows,
+    });
+  } catch (err) {
+    console.error('Error fetching admin stats:', err.message);
+    res.status(500).json({ error: 'query failed' });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 initDb()
   .then(() => {
