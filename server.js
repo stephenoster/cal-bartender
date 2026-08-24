@@ -766,9 +766,38 @@ app.post('/sms-telnyx', async (req, res) => {
 
   const event = req.body?.data;
 
-  // Only handle inbound messages
-  if (!event || event.event_type !== 'message.received') {
-    console.log('Telnyx: ignoring event type:', event?.event_type);
+  if (!event) {
+    console.log('Telnyx: ignoring event with no data');
+    return;
+  }
+
+  // Telnyx also posts delivery-status webhooks (message.sent,
+  // message.finalized) to this same route, not just inbound messages.
+  // Those have always been discarded — fine for confirming basic
+  // delivery, but it means a send Telnyx itself accepted (200 OK, no
+  // error from sendSms/sendMms) that the carrier then silently rejected
+  // downstream has never actually been visible in these logs. That's a
+  // real risk for anything that isn't a standard image/video MMS
+  // attachment — like the onboarding vCard. Surface the failure reason
+  // when message.finalized reports one; every other non-inbound event
+  // keeps getting ignored exactly as before.
+  if (event.event_type === 'message.finalized') {
+    const recipients = event.payload?.to || [];
+    const failed = recipients.filter(r => r.status && r.status.includes('failed'));
+    if (failed.length > 0) {
+      console.error(
+        'Telnyx: delivery failed —',
+        JSON.stringify({ id: event.payload?.id, to: recipients, errors: event.payload?.errors })
+      );
+    } else {
+      console.log('Telnyx: ignoring event type:', event.event_type);
+    }
+    return;
+  }
+
+  // Only handle inbound messages past this point
+  if (event.event_type !== 'message.received') {
+    console.log('Telnyx: ignoring event type:', event.event_type);
     return;
   }
 
