@@ -63,6 +63,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 // How many past messages to pull from the conversations table per reply
 const MAX_HISTORY = 20;
 
+// Served statically out of public/ — see the sendMms call in the 'name'
+// onboarding step for where this actually goes out.
+const COLLIN_VCARD_URL = 'https://collinthomas.bar/collin.vcf';
+
 // ── ROTATING OBSESSION ──────────────────────────────────────────────────────
 // Update this monthly. Swap the text between the backticks — nothing else changes.
 // See OBSESSIONS.md for the full rotation schedule.
@@ -388,6 +392,39 @@ async function sendSms(to, text) {
   }
 }
 
+// Same as sendSms, but with one or more media attachments (the vCard,
+// eventually a cabinet photo reply). Telnyx fetches each URL itself and
+// attaches it — mediaUrls has to be publicly reachable, not a local path.
+async function sendMms(to, text, mediaUrls) {
+  const telnyxApiKey = process.env.TELNYX_API_KEY;
+  const telnyxPhone = process.env.TELNYX_PHONE_NUMBER;
+
+  if (!telnyxApiKey || !telnyxPhone) {
+    console.error('Onboarding: missing Telnyx credentials, cannot send MMS');
+    return false;
+  }
+
+  try {
+    const res = await fetch('https://api.telnyx.com/v2/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${telnyxApiKey}`,
+      },
+      body: JSON.stringify({ from: telnyxPhone, to, text, media_urls: mediaUrls }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      console.error('Onboarding: Telnyx MMS send error:', JSON.stringify(data));
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('Onboarding: Telnyx MMS send exception:', err.message);
+    return false;
+  }
+}
+
 // Best-effort city → timezone lookup. US cocktail hobbyists are the whole
 // audience here, so US matches are preferred over same-named cities
 // elsewhere, and the most populous match wins any remaining ambiguity
@@ -409,6 +446,42 @@ function resolveTimezone(cityText) {
   candidates.sort((a, b) => (b.pop || 0) - (a.pop || 0));
 
   return candidates[0].timezone || null;
+}
+
+// Best-effort extraction of a name from a free-text reply to "What's your
+// name?" People answer everything from a bare name to a full sentence
+// with a question tacked on ("Danny can I send you a pic of my bar").
+// This won't be perfect — it's a fast, free heuristic, not real language
+// understanding — but it handles the common cases: bare names, "it's X" /
+// "I'm X" lead-ins, and run-on replies that continue past the name with
+// no punctuation to signal where it ends.
+function extractName(raw) {
+  let text = raw.trim();
+
+  // Strip common lead-ins
+  text = text.replace(/^(hey,?\s*)?(it'?s|i'?m|this is|my name is|name'?s)\s+/i, '');
+
+  // Cut at the first sentence-ending punctuation
+  const punctMatch = text.match(/^[^.!?,]+/);
+  if (punctMatch) text = punctMatch[0];
+
+  // Cut at the first stop-word that signals the sentence is continuing
+  // past the name — but never at word position 0, so a name that happens
+  // to collide with a stop-word-ish word (e.g. "Grant", "Art") isn't
+  // mistaken for the start of a question and wiped out. "will" is
+  // deliberately left off this list for the same reason.
+  const words = text.trim().split(/\s+/);
+  const STOP_WORDS = /^(can|could|is|are|and|but|so|would|please|also)$/i;
+  let cutIndex = words.length;
+  for (let i = 1; i < words.length; i++) {
+    if (STOP_WORDS.test(words[i])) {
+      cutIndex = i;
+      break;
+    }
+  }
+
+  const name = words.slice(0, Math.min(cutIndex, 3)).join(' ').trim();
+  return (name || raw.trim()).slice(0, 100);
 }
 
 // Onboarding now starts on someone's very first-ever contact, not after a
@@ -459,12 +532,43 @@ async function handleOnboardingReply(userPhone, incomingMessage) {
   };
 
   if (step === 'name') {
-    const name = incomingMessage.trim().slice(0, 100);
-    await advance(
-      `UPDATE users SET name = $2, onboarding_step = 'bar_type' WHERE phone_number = $1`,
-      [userPhone, name],
-      `${name} Got it. What kinda bar are we working with?\n\nA. Japanese whisky, small-batch amaro, Luxardo cherries, perfect clear ice\nB. Good bourbon, decent tequila, real bitters, cold vermouth, fresh citrus always\nC. Solid well spirits, a few interesting bottles, building the collection\nD. Whatever looked good at the store, kind of a mess but there's good stuff in there`
-    );
+    const name = extractName(incomingMessage);
+
+    try {
+      await pool.query(
+        `UPDATE users SET name = $2, onboarding_step = 'bar_type' WHERE phone_number = $1`,
+        [userPhone, name]
+      );
+    } catch (err) {
+      console.error("Onboarding: error updating user at step 'name':", err.message);
+    }
+
+    // Two messages here, not one — the contact card first, then the
+    // actual next question. Logged as two separate conversation turns
+    // since that's what actually went out over SMS.
+    const contactCardText = `Nice to meet you, ${name}. Here's my info so you can save it?`;
+    const barTypeText = `what kinda bar are we working with?\n\nA. Japanese whisky, small-batch amaro, Luxardo cherries, perfect clear ice\nB. Good bourbon, decent tequila, real bitters, cold vermouth, fresh citrus always\nC. Solid well spirits, a few interesting bottles, building the collection\nD. Whatever looked good at the store, kind of a mess but there's good stuff in there`;
+
+    await sendMms(userPhone, contactCardText, [COLLIN_VCARD_URL]);
+    try {
+      await pool.query(
+        `INSERT INTO conversations (phone_number, role, content) VALUES ($1, 'assistant', $2)`,
+        [userPhone, contactCardText]
+      );
+    } catch (err) {
+      console.error('Onboarding: error logging contact card message:', err.message);
+    }
+
+    await sendSms(userPhone, barTypeText);
+    try {
+      await pool.query(
+        `INSERT INTO conversations (phone_number, role, content) VALUES ($1, 'assistant', $2)`,
+        [userPhone, barTypeText]
+      );
+    } catch (err) {
+      console.error('Onboarding: error logging bar type question:', err.message);
+    }
+
     return true;
   }
 
