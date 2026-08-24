@@ -63,8 +63,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 // How many past messages to pull from the conversations table per reply
 const MAX_HISTORY = 20;
 
-// Served statically out of public/ — see the sendMms call in the 'name'
-// onboarding step for where this actually goes out.
+// Served statically out of public/ — linked in the contact card message
+// sent during the 'name' onboarding step, not sent as an MMS attachment
+// (see the note there for why).
 const COLLIN_VCARD_URL = 'https://collinthomas.bar/collin.vcf';
 
 // ── ROTATING OBSESSION ──────────────────────────────────────────────────────
@@ -546,10 +547,18 @@ async function handleOnboardingReply(userPhone, incomingMessage) {
     // Two messages here, not one — the contact card first, then the
     // actual next question. Logged as two separate conversation turns
     // since that's what actually went out over SMS.
-    const contactCardText = `Nice to meet you, ${name}. Here's my info so you can save it?`;
+    //
+    // The vCard goes out as a link in a plain SMS, not an MMS attachment.
+    // Telnyx does support vCard as an MMS content type, but their own
+    // docs flag document-type attachments (as opposed to images) as
+    // having "limited carrier support" — confirmed the hard way against
+    // AT&T (error 40008, "the recipient carrier did not accept the
+    // message"). A link that opens straight into Contacts sidesteps
+    // carrier MMSC handling entirely.
+    const contactCardText = `Nice to meet you, ${name}. Here's my info so you can save it: ${COLLIN_VCARD_URL}`;
     const barTypeText = `what kinda bar are we working with?\n\nA. Japanese whisky, small-batch amaro, Luxardo cherries, perfect clear ice\nB. Good bourbon, decent tequila, real bitters, cold vermouth, fresh citrus always\nC. Solid well spirits, a few interesting bottles, building the collection\nD. Whatever looked good at the store, kind of a mess but there's good stuff in there`;
 
-    await sendMms(userPhone, contactCardText, [COLLIN_VCARD_URL]);
+    await sendSms(userPhone, contactCardText);
     try {
       await pool.query(
         `INSERT INTO conversations (phone_number, role, content) VALUES ($1, 'assistant', $2)`,
