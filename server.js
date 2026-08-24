@@ -79,7 +79,7 @@ const MAX_HISTORY = 20;
 // Served statically out of public/ — linked in the contact card message
 // sent during the 'name' onboarding step, not sent as an MMS attachment
 // (see the note there for why).
-const COLLIN_VCARD_URL = 'https://collinthomas.bar/collin.vcf';
+const COLLIN_VCARD_URL = 'https://www.collinthomas.bar/collin.vcf';
 
 // ── ROTATING OBSESSION ──────────────────────────────────────────────────────
 // Update this monthly. Swap the text between the backticks — nothing else changes.
