@@ -58,6 +58,19 @@ app.use((req, res, next) => {
   next();
 });
 
+// Has to come before express.static — this project's installed
+// mime-types/mime-db resolves .vcf to the legacy, unofficial
+// 'text/x-vcard'. iOS Safari only recognizes the current IANA-standard
+// 'text/vcard' for its hand-off into Contacts; served as anything else,
+// Safari treats it as an unrecognized file type and shows "Safari cannot
+// download this file" instead of the contact preview. Overriding the
+// header here, rather than reconfiguring mime-types globally, keeps the
+// fix scoped to the one file that actually needs it.
+app.get('/collin.vcf', (req, res) => {
+  res.setHeader('Content-Type', 'text/vcard');
+  res.sendFile(path.join(__dirname, 'public', 'collin.vcf'));
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // How many past messages to pull from the conversations table per reply
