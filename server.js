@@ -346,6 +346,71 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
   }
 });
 
+// ── Time awareness ──────────────────────────────────────────────────────────
+// Without this, the model sees history with no timestamps, so a message from
+// last week reads like it came five minutes ago and Collin picks up a dead
+// thread. Any gap longer than SESSION_GAP_HOURS is treated as a new visit.
+const SESSION_GAP_HOURS = 4;
+
+function formatLocal(date, timezone) {
+  return date.toLocaleString('en-US', {
+    timeZone: timezone,
+    weekday: 'long', month: 'short', day: 'numeric',
+    hour: 'numeric', minute: '2-digit',
+  });
+}
+
+function describeGap(seconds) {
+  const hours = seconds / 3600;
+  if (hours < 1) return 'a few minutes';
+  if (hours < 24) return `about ${Math.round(hours)} hour${Math.round(hours) === 1 ? '' : 's'}`;
+  const days = Math.round(hours / 24);
+  if (days < 14) return `${days} day${days === 1 ? '' : 's'}`;
+  const weeks = Math.round(days / 7);
+  if (weeks < 9) return `${weeks} weeks`;
+  return `${Math.round(days / 30)} months`;
+}
+
+function addTimeContext(rows, timezone) {
+  const now = Date.now();
+  const gapSeconds = SESSION_GAP_HOURS * 3600;
+
+  // Mark each place in the history where a new visit started, so the model
+  // can see which parts belong to earlier conversations.
+  const history = rows.map((row, i) => {
+    const prev = rows[i - 1];
+    const gap = prev ? prev.age_seconds - row.age_seconds : 0;
+    if (row.role === 'user' && prev && gap > gapSeconds) {
+      const sentAt = formatLocal(new Date(now - row.age_seconds * 1000), timezone);
+      return {
+        role: 'user',
+        content: `[new visit, ${describeGap(gap)} later, ${sentAt}]\n${row.content}`,
+      };
+    }
+    return { role: row.role, content: row.content };
+  });
+
+  // Gap between the message just received (last row) and the one before it.
+  const last = rows[rows.length - 1];
+  const prev = rows[rows.length - 2];
+  const currentGap = last && prev ? prev.age_seconds - last.age_seconds : 0;
+
+  let timeContext = `## RIGHT NOW
+It's ${formatLocal(new Date(now), timezone)} where they are.`;
+
+  if (currentGap > gapSeconds) {
+    timeContext += ` Their last message before this one was ${describeGap(currentGap)} ago, so this is a new visit, not a continuation.
+
+Treat it like a regular walking back into your bar. Respond to what they just said. Don't pick up an old thread, re-pitch old options, or ask about a drink as if you just made it. A short callback to last time is fine if it fits naturally (how'd that Toronto land?), once, then move on.`;
+  }
+
+  timeContext += `
+
+Notes like [new visit, 6 days later, ...] in the history are added by the system to show when earlier messages were sent. Never write them yourself or mention them. Use the time of day and day of week the way a bartender would: late on a weeknight is different from Saturday afternoon.`;
+
+  return { history, timeContext };
+}
+
 // Helper: split long messages at paragraph breaks
 function splitMessage(text, maxLength) {
   const chunks = [];
@@ -1026,19 +1091,26 @@ app.post('/sms-telnyx', async (req, res) => {
     console.error('Onboarding: unexpected error, falling through to Collin:', err.message);
   }
 
-  // Pull the last MAX_HISTORY messages, oldest first, for the model call
+  // Pull the last MAX_HISTORY messages, oldest first, for the model call.
+  // Ages are computed in SQL against the DB's own clock, so the gap math
+  // doesn't depend on how Node parses the timezone-less created_at column.
   let history;
+  let timeContext = '';
   try {
     const { rows } = await pool.query(
-      `SELECT role, content FROM (
-         SELECT role, content, created_at FROM conversations
+      `SELECT role, content, age_seconds FROM (
+         SELECT role, content, created_at,
+                EXTRACT(EPOCH FROM (now() - created_at))::float AS age_seconds
+         FROM conversations
          WHERE phone_number = $1
          ORDER BY created_at DESC
          LIMIT $2
        ) recent ORDER BY created_at ASC`,
       [userPhone, MAX_HISTORY]
     );
-    history = rows;
+    const tzRow = await pool.query(`SELECT timezone FROM users WHERE phone_number = $1`, [userPhone]);
+    const timezone = tzRow.rows[0]?.timezone || 'America/New_York';
+    ({ history, timeContext } = addTimeContext(rows, timezone));
   } catch (err) {
     console.error('Telnyx: error loading history, falling back to this message only:', err.message);
     history = [{ role: 'user', content: incomingMessage }];
@@ -1070,6 +1142,9 @@ app.post('/sms-telnyx', async (req, res) => {
             text: COLLIN_SYSTEM_PROMPT,
             cache_control: { type: 'ephemeral', ttl: '1h' },
           },
+          // After the cached block on purpose: it changes every message,
+          // and putting it first would break the prompt cache.
+          ...(timeContext ? [{ type: 'text', text: timeContext }] : []),
         ],
         messages: history,
       }),
