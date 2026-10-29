@@ -25,6 +25,7 @@ async function initDb() {
     -- The users table above already exists in production, so new columns
     -- need an explicit ALTER rather than relying on CREATE TABLE IF NOT EXISTS.
     ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_step TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS opted_out BOOLEAN DEFAULT false;
 
     CREATE TABLE IF NOT EXISTS recipes (
       id              SERIAL PRIMARY KEY,
@@ -631,6 +632,8 @@ function extractName(raw) {
 // Runs on every inbound message. Returns true if this message was consumed
 // by the onboarding flow (caller should stop, not forward to Collin), false
 // if there's no onboarding in progress for this person.
+const ONBOARDING_EXPIRY_HOURS = 24;
+
 async function handleOnboardingReply(userPhone, incomingMessage) {
   let user;
   try {
@@ -646,6 +649,28 @@ async function handleOnboardingReply(userPhone, incomingMessage) {
 
   if (!user || user.onboarding_done || !user.onboarding_step) {
     return false;
+  }
+
+  // Onboarding expires. If they went quiet mid-script for more than a day,
+  // whatever they're texting now isn't an answer to a question from last
+  // week. Drop them out of the script and let Collin handle it. Whatever
+  // they already answered stays saved. The incoming message is already
+  // logged by the time we get here, so the gap is to the message before it.
+  try {
+    const { rows } = await pool.query(
+      `SELECT EXTRACT(EPOCH FROM (now() - created_at))::float AS age_seconds
+       FROM conversations WHERE phone_number = $1
+       ORDER BY created_at DESC OFFSET 1 LIMIT 1`,
+      [userPhone]
+    );
+    const gapSeconds = rows[0]?.age_seconds;
+    if (gapSeconds && gapSeconds > ONBOARDING_EXPIRY_HOURS * 3600) {
+      await pool.query(`UPDATE users SET onboarding_step = NULL WHERE phone_number = $1`, [userPhone]);
+      console.log(`Onboarding: expired at step '${user.onboarding_step}', handing to Collin`);
+      return false;
+    }
+  } catch (err) {
+    console.error('Onboarding: error checking expiry:', err.message);
   }
 
   const step = user.onboarding_step;
@@ -1029,6 +1054,29 @@ app.post('/sms-telnyx', async (req, res) => {
     console.error('Telnyx: error upserting user:', err.message);
   }
 
+  // Carrier opt-out keywords. Telnyx sends its own confirmation and blocks
+  // further sends, so all we do is record it. Last Call checks this flag so
+  // Collin never tries to text someone who opted out.
+  const keyword = incomingMessage.trim().toUpperCase();
+  if (['STOP', 'STOPALL', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT'].includes(keyword)) {
+    try {
+      await pool.query(`UPDATE users SET opted_out = true WHERE phone_number = $1`, [userPhone]);
+      console.log('Telnyx: user opted out');
+    } catch (err) {
+      console.error('Telnyx: error recording opt-out:', err.message);
+    }
+    return;
+  }
+  if (['START', 'UNSTOP'].includes(keyword)) {
+    try {
+      await pool.query(`UPDATE users SET opted_out = false WHERE phone_number = $1`, [userPhone]);
+      console.log('Telnyx: user opted back in');
+    } catch (err) {
+      console.error('Telnyx: error recording opt-in:', err.message);
+    }
+    return;
+  }
+
   // HELP is handled here directly, not by Collin — this is required
   // compliance copy, not something he'd say in his own voice. Doesn't
   // touch conversations or call Anthropic at all.
@@ -1305,10 +1353,162 @@ app.get('/admin/api/stats', async (req, res) => {
   }
 });
 
+// ── Last Call ────────────────────────────────────────────────────────────────
+// Same-night check-in after a recipe. Collin writes it himself so it can
+// reference the actual drink. A background loop checks the database every
+// few minutes rather than using timers, so a redeploy can't lose a pending
+// follow-up. Set LAST_CALL_ENABLED=false in Railway to switch it off.
+const LAST_CALL = {
+  minMinutes: 90,          // earliest after the recipe
+  maxMinutes: 180,         // latest after the recipe
+  quietMinutes: 30,        // skip if they've texted Collin within this window
+  earliestLocalHour: 12,   // no check-ins before noon local
+  cutoffLocalHour: 22,     // hard stop at 10pm local
+  pollMs: 5 * 60 * 1000,
+};
+
+function localHour(timezone) {
+  const h = new Date().toLocaleString('en-US', { timeZone: timezone, hour: 'numeric', hour12: false });
+  return Number(h) % 24;
+}
+
+async function findLastCallCandidates() {
+  // Newest recipe per person that's inside the 90 min to 3 hr window, hasn't
+  // been followed up, from someone who's opted in, gone quiet for the last
+  // half hour, and hasn't already had a Last Call today.
+  const { rows } = await pool.query(
+    `SELECT DISTINCT ON (r.phone_number)
+            r.id, r.phone_number, r.drink_name,
+            EXTRACT(EPOCH FROM (now() - r.made_at))::float AS age_seconds,
+            COALESCE(u.timezone, 'America/New_York') AS timezone
+     FROM recipes r
+     JOIN users u ON u.phone_number = r.phone_number
+     WHERE r.followup_sent = false
+       AND r.made_at BETWEEN now() - make_interval(mins => $2) AND now() - make_interval(mins => $1)
+       AND COALESCE(u.opted_out, false) = false
+       AND NOT EXISTS (
+         SELECT 1 FROM recipes r2
+         WHERE r2.phone_number = r.phone_number AND r2.made_at > r.made_at
+       )
+       AND NOT EXISTS (
+         SELECT 1 FROM conversations c
+         WHERE c.phone_number = r.phone_number AND c.role = 'user'
+           AND c.created_at > now() - make_interval(mins => $3)
+       )
+       AND NOT EXISTS (
+         SELECT 1 FROM recipes r3
+         WHERE r3.phone_number = r.phone_number
+           AND r3.followup_at > now() - interval '12 hours'
+       )
+     ORDER BY r.phone_number, r.made_at DESC`,
+    [LAST_CALL.minMinutes, LAST_CALL.maxMinutes, LAST_CALL.quietMinutes]
+  );
+  return rows;
+}
+
+async function writeLastCall(candidate) {
+  const { rows } = await pool.query(
+    `SELECT role, content, age_seconds FROM (
+       SELECT role, content, created_at,
+              EXTRACT(EPOCH FROM (now() - created_at))::float AS age_seconds
+       FROM conversations WHERE phone_number = $1
+       ORDER BY created_at DESC LIMIT $2
+     ) recent ORDER BY created_at ASC`,
+    [candidate.phone_number, MAX_HISTORY]
+  );
+  const { history } = addTimeContext(rows, candidate.timezone);
+  history.push({ role: 'user', content: '[LAST CALL]' });
+
+  const minutes = Math.round(candidate.age_seconds / 60);
+  const instruction = `## LAST CALL
+It's ${formatLocal(new Date(), candidate.timezone)} where they are. About ${minutes} minutes ago you gave them the full recipe for ${candidate.drink_name || 'a drink'}. They haven't texted since.
+
+The [LAST CALL] message is from the system, not them. It means: send one short, unprompted check-in text, the way a bartender drifts back down the bar to see how the drink landed.
+
+Rules:
+- One or two sentences. Plain text, no lists, no recipe, no new options.
+- Reference the drink by name or by something specific about it.
+- At most one easy question. It's fine to ask none.
+- Make it feel like a person checking in, not a survey or a reminder.
+- Don't mention tips, payment, or that this is a follow-up.
+- Never write [LAST CALL] or [RECIPE].`;
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-5',
+      max_tokens: 200,
+      system: [
+        { type: 'text', text: COLLIN_SYSTEM_PROMPT, cache_control: { type: 'ephemeral', ttl: '1h' } },
+        { type: 'text', text: instruction },
+      ],
+      messages: history,
+    }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(`Anthropic error: ${JSON.stringify(data)}`);
+
+  const text = data.content?.find(b => b.type === 'text')?.text || '';
+  return stripRecipeMarker(text).replace(/\[LAST CALL\]/g, '').trim();
+}
+
+let lastCallRunning = false;
+
+async function runLastCall() {
+  if (lastCallRunning || process.env.LAST_CALL_ENABLED === 'false') return;
+  lastCallRunning = true;
+
+  try {
+    const candidates = await findLastCallCandidates();
+
+    for (const c of candidates) {
+      const hour = localHour(c.timezone);
+      if (hour < LAST_CALL.earliestLocalHour || hour >= LAST_CALL.cutoffLocalHour) continue;
+
+      // Claim the row first so overlapping runs or a second instance can't
+      // double-send. If generation or sending fails, it's simply skipped.
+      const claim = await pool.query(
+        `UPDATE recipes SET followup_sent = true
+         WHERE id = $1 AND followup_sent = false RETURNING id`,
+        [c.id]
+      );
+      if (claim.rowCount === 0) continue;
+
+      try {
+        const text = await writeLastCall(c);
+        if (!text) throw new Error('empty Last Call text');
+
+        const sent = await sendSms(c.phone_number, text);
+        if (!sent) throw new Error('send failed');
+
+        await pool.query(`UPDATE recipes SET followup_at = now() WHERE id = $1`, [c.id]);
+        await pool.query(
+          `INSERT INTO conversations (phone_number, role, content) VALUES ($1, 'assistant', $2)`,
+          [c.phone_number, text]
+        );
+        console.log(`Last Call: sent for recipe ${c.id} (${c.drink_name})`);
+      } catch (err) {
+        console.error(`Last Call: skipped recipe ${c.id}:`, err.message);
+      }
+    }
+  } catch (err) {
+    console.error('Last Call: run failed:', err.message);
+  } finally {
+    lastCallRunning = false;
+  }
+}
+
 const PORT = process.env.PORT || 3000;
 initDb()
   .then(() => {
     app.listen(PORT, () => console.log(`Collin running on port ${PORT}`));
+    setInterval(runLastCall, LAST_CALL.pollMs);
   })
   .catch(err => {
     console.error('Database init failed:', err);
