@@ -26,6 +26,7 @@ async function initDb() {
     -- need an explicit ALTER rather than relying on CREATE TABLE IF NOT EXISTS.
     ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_step TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS opted_out BOOLEAN DEFAULT false;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS last_happy_hour TIMESTAMP;
 
     CREATE TABLE IF NOT EXISTS recipes (
       id              SERIAL PRIMARY KEY,
@@ -1487,6 +1488,7 @@ async function runLastCall() {
         const sent = await sendSms(c.phone_number, text);
         if (!sent) throw new Error('send failed');
 
+        await releaseOnboarding(c.phone_number);
         await pool.query(`UPDATE recipes SET followup_at = now() WHERE id = $1`, [c.id]);
         await pool.query(
           `INSERT INTO conversations (phone_number, role, content) VALUES ($1, 'assistant', $2)`,
@@ -1504,11 +1506,178 @@ async function runLastCall() {
   }
 }
 
+// When Collin texts first, whatever they reply is an answer to him, not to
+// an onboarding question from days ago. Clear any stale onboarding step so
+// the reply routes to Collin.
+async function releaseOnboarding(phone) {
+  try {
+    await pool.query(
+      `UPDATE users SET onboarding_step = NULL WHERE phone_number = $1 AND onboarding_step IS NOT NULL`,
+      [phone]
+    );
+  } catch (err) {
+    console.error('releaseOnboarding error:', err.message);
+  }
+}
+
+// ── Happy Hour ───────────────────────────────────────────────────────────────
+// Friday 5pm local, Collin texts people who've talked to him in the last 30
+// days. This is the one message nobody asked for, so it's deliberately
+// narrow: once a week max, personal rather than a blast, no promo language.
+// Carriers treat scheduled alcohol messages as promotional, which our 10DLC
+// campaign isn't approved for. Off by default: set HAPPY_HOUR_ENABLED=true
+// in Railway to turn it on, only once the campaign covers it.
+const HAPPY_HOUR = {
+  weekday: 'Friday',
+  startHour: 17,            // 5pm local
+  endHour: 18,              // only send in the 5 o'clock hour
+  activeDays: 30,           // texted Collin within this many days
+  lastCallBufferHours: 48,  // skip if they got a Last Call this recently
+};
+
+function localParts(timezone) {
+  const now = new Date();
+  const weekday = now.toLocaleString('en-US', { timeZone: timezone, weekday: 'long' });
+  const hour = Number(now.toLocaleString('en-US', { timeZone: timezone, hour: 'numeric', hour12: false })) % 24;
+  const minute = Number(now.toLocaleString('en-US', { timeZone: timezone, minute: 'numeric' }));
+  return { weekday, hour, secondsSinceMidnight: hour * 3600 + minute * 60 };
+}
+
+async function findHappyHourCandidates() {
+  const { rows } = await pool.query(
+    `SELECT u.phone_number, u.name, u.bar_type, u.favorite_drink,
+            COALESCE(u.timezone, 'America/New_York') AS timezone,
+            EXTRACT(EPOCH FROM (now() - lu.last_user_at))::float AS since_user_seconds
+     FROM users u
+     JOIN LATERAL (
+       SELECT max(created_at) AS last_user_at FROM conversations c
+       WHERE c.phone_number = u.phone_number AND c.role = 'user'
+     ) lu ON true
+     WHERE COALESCE(u.opted_out, false) = false
+       AND lu.last_user_at > now() - make_interval(days => $1)
+       AND (u.last_happy_hour IS NULL OR u.last_happy_hour < now() - interval '6 days')
+       AND NOT EXISTS (
+         SELECT 1 FROM recipes r
+         WHERE r.phone_number = u.phone_number
+           AND r.followup_at > now() - make_interval(hours => $2)
+       )`,
+    [HAPPY_HOUR.activeDays, HAPPY_HOUR.lastCallBufferHours]
+  );
+  return rows;
+}
+
+async function writeHappyHour(c) {
+  const { rows } = await pool.query(
+    `SELECT role, content, age_seconds FROM (
+       SELECT role, content, created_at,
+              EXTRACT(EPOCH FROM (now() - created_at))::float AS age_seconds
+       FROM conversations WHERE phone_number = $1
+       ORDER BY created_at DESC LIMIT $2
+     ) recent ORDER BY created_at ASC`,
+    [c.phone_number, MAX_HISTORY]
+  );
+  const { history } = addTimeContext(rows, c.timezone);
+  history.push({ role: 'user', content: '[HAPPY HOUR]' });
+
+  const known = [
+    c.name && `Their name is ${c.name}.`,
+    c.bar_type && `Bar type from onboarding: ${c.bar_type}.`,
+    c.favorite_drink && `A drink they said they'd make again: ${c.favorite_drink}.`,
+  ].filter(Boolean).join(' ');
+
+  const instruction = `## HAPPY HOUR
+It's ${formatLocal(new Date(), c.timezone)} where they are. Friday, 5 o'clock. They last texted you ${describeGap(c.since_user_seconds)} ago. ${known}
+
+The [HAPPY HOUR] message is from the system, not them. It means: send one short, unprompted text, like a bartender who knows them shooting a message at the end of the week.
+
+Rules:
+- One or two sentences. Plain text, no lists, no recipe, no A/B/C options.
+- Make it about them. Pull from something real in your history together, their bar, a past drink, or the season, if it fits naturally. If you don't know much about them, keep it simple and warm.
+- You can float one idea or ask one easy question. Not both stacked.
+- No promo language, no links, no "reply now," no mention of tips or payment, and don't call it a happy hour message or a scheduled text.
+- Never write [HAPPY HOUR], [LAST CALL], or [RECIPE].`;
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-5',
+      max_tokens: 200,
+      system: [
+        { type: 'text', text: COLLIN_SYSTEM_PROMPT, cache_control: { type: 'ephemeral', ttl: '1h' } },
+        { type: 'text', text: instruction },
+      ],
+      messages: history,
+    }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(`Anthropic error: ${JSON.stringify(data)}`);
+
+  const text = data.content?.find(b => b.type === 'text')?.text || '';
+  return stripRecipeMarker(text).replace(/\[(HAPPY HOUR|LAST CALL)\]/g, '').trim();
+}
+
+let happyHourRunning = false;
+
+async function runHappyHour() {
+  // Off unless explicitly turned on. See the compliance note above.
+  if (happyHourRunning || process.env.HAPPY_HOUR_ENABLED !== 'true') return;
+  happyHourRunning = true;
+
+  try {
+    const candidates = await findHappyHourCandidates();
+
+    for (const c of candidates) {
+      const local = localParts(c.timezone);
+      if (local.weekday !== HAPPY_HOUR.weekday) continue;
+      if (local.hour < HAPPY_HOUR.startHour || local.hour >= HAPPY_HOUR.endHour) continue;
+      // Already texted Collin today: they don't need a nudge.
+      if (c.since_user_seconds < local.secondsSinceMidnight) continue;
+
+      const claim = await pool.query(
+        `UPDATE users SET last_happy_hour = now()
+         WHERE phone_number = $1
+           AND (last_happy_hour IS NULL OR last_happy_hour < now() - interval '6 days')
+         RETURNING phone_number`,
+        [c.phone_number]
+      );
+      if (claim.rowCount === 0) continue;
+
+      try {
+        const text = await writeHappyHour(c);
+        if (!text) throw new Error('empty Happy Hour text');
+
+        const sent = await sendSms(c.phone_number, text);
+        if (!sent) throw new Error('send failed');
+
+        await releaseOnboarding(c.phone_number);
+        await pool.query(
+          `INSERT INTO conversations (phone_number, role, content) VALUES ($1, 'assistant', $2)`,
+          [c.phone_number, text]
+        );
+        console.log('Happy Hour: sent');
+      } catch (err) {
+        console.error('Happy Hour: skipped:', err.message);
+      }
+    }
+  } catch (err) {
+    console.error('Happy Hour: run failed:', err.message);
+  } finally {
+    happyHourRunning = false;
+  }
+}
+
 const PORT = process.env.PORT || 3000;
 initDb()
   .then(() => {
     app.listen(PORT, () => console.log(`Collin running on port ${PORT}`));
     setInterval(runLastCall, LAST_CALL.pollMs);
+    setInterval(runHappyHour, LAST_CALL.pollMs);
   })
   .catch(err => {
     console.error('Database init failed:', err);
