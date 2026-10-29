@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require('crypto');
 const path = require('path');
 const pool = require('./db');
 const cityTimezones = require('city-timezones');
@@ -48,12 +49,16 @@ async function initDb() {
 const app = express();
 // Railway sits behind a proxy. This makes req.ip the real visitor's IP.
 app.set('trust proxy', 1);
-app.use(express.json());
+// Keep the raw request body around. Telnyx signs the exact bytes it sent,
+// so signature verification needs them before JSON parsing touches anything.
+app.use(express.json({
+  verify: (req, res, buf) => { req.rawBody = buf.toString('utf8'); },
+}));
 app.use(express.urlencoded({ extended: false }));
 
-// Simple in-memory rate limiter, keyed by IP. Resets on redeploy, which is fine
+// Simple in-memory rate limiter, keyed by IP by default. Resets on redeploy, which is fine
 // at this scale. Returns middleware you can attach to any route.
-function rateLimit({ windowMs, max }) {
+function rateLimit({ windowMs, max, key = req => req.ip }) {
   const hits = new Map(); // ip -> array of timestamps
 
   setInterval(() => {
@@ -67,17 +72,25 @@ function rateLimit({ windowMs, max }) {
 
   return (req, res, next) => {
     const now = Date.now();
-    const recent = (hits.get(req.ip) || []).filter(t => t > now - windowMs);
+    const k = key(req);
+    const recent = (hits.get(k) || []).filter(t => t > now - windowMs);
     if (recent.length >= max) {
       return res.status(429).json({ error: 'too many requests' });
     }
     recent.push(now);
-    hits.set(req.ip, recent);
+    hits.set(k, recent);
     next();
   };
 }
 
 const chatLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 40 }); // 40/hour per IP
+const joinIpLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5 }); // 5/hour per IP
+// Per-number cap so nobody can spam welcome texts at one person by rotating IPs.
+const joinPhoneLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000,
+  max: 3,
+  key: req => `phone:${req.body?.phone}`,
+}); // 3/day per phone number
 
 // Redirect .com to .bar
 app.use((req, res, next) => {
@@ -760,7 +773,7 @@ async function sendOnboardingOpener(userPhone) {
 }
 
 // ── Web opt-in form endpoint ────────────────────────────────────────────────
-app.post('/join', async (req, res) => {
+app.post('/join', joinIpLimiter, joinPhoneLimiter, async (req, res) => {
   const { phone, smsConsent } = req.body;
 
   if (!phone || !/^\+1\d{10}$/.test(phone)) {
@@ -828,7 +841,50 @@ app.post('/join', async (req, res) => {
 });
 
 // ── Telnyx SMS webhook ──────────────────────────────────────────────────────
+// Telnyx signs each webhook with Ed25519. The signed content is
+// "<timestamp>|<raw body>". The public key comes from the Telnyx portal
+// (Keys & Credentials > Public Key) and lives in TELNYX_PUBLIC_KEY.
+const TELNYX_TOLERANCE_SECONDS = 300;
+
+function verifyTelnyxSignature(req) {
+  const publicKey = process.env.TELNYX_PUBLIC_KEY;
+  const signature = req.headers['telnyx-signature-ed25519'];
+  const timestamp = req.headers['telnyx-timestamp'];
+
+  if (!publicKey) {
+    console.error('Telnyx: TELNYX_PUBLIC_KEY not set, rejecting webhook');
+    return false;
+  }
+  if (!signature || !timestamp || !req.rawBody) return false;
+
+  const age = Math.abs(Math.floor(Date.now() / 1000) - Number(timestamp));
+  if (!Number.isFinite(age) || age > TELNYX_TOLERANCE_SECONDS) return false;
+
+  try {
+    // Wrap the raw 32-byte key in the standard SPKI header so Node can load it.
+    const der = Buffer.concat([
+      Buffer.from('302a300506032b6570032100', 'hex'),
+      Buffer.from(publicKey, 'base64'),
+    ]);
+    const key = crypto.createPublicKey({ key: der, format: 'der', type: 'spki' });
+    return crypto.verify(
+      null,
+      Buffer.from(`${timestamp}|${req.rawBody}`, 'utf8'),
+      key,
+      Buffer.from(signature, 'base64')
+    );
+  } catch (err) {
+    console.error('Telnyx: signature check error', err.message);
+    return false;
+  }
+}
+
 app.post('/sms-telnyx', async (req, res) => {
+  if (!verifyTelnyxSignature(req)) {
+    console.warn(`Telnyx: invalid signature from ${req.ip}, rejected`);
+    return res.sendStatus(403);
+  }
+
   // Respond immediately — Telnyx requires a 200 within 2 seconds
   res.sendStatus(200);
 
