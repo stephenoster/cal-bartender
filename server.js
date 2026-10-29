@@ -46,8 +46,38 @@ async function initDb() {
 }
 
 const app = express();
+// Railway sits behind a proxy. This makes req.ip the real visitor's IP.
+app.set('trust proxy', 1);
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Simple in-memory rate limiter, keyed by IP. Resets on redeploy, which is fine
+// at this scale. Returns middleware you can attach to any route.
+function rateLimit({ windowMs, max }) {
+  const hits = new Map(); // ip -> array of timestamps
+
+  setInterval(() => {
+    const cutoff = Date.now() - windowMs;
+    for (const [ip, times] of hits) {
+      const recent = times.filter(t => t > cutoff);
+      if (recent.length) hits.set(ip, recent);
+      else hits.delete(ip);
+    }
+  }, 10 * 60 * 1000).unref();
+
+  return (req, res, next) => {
+    const now = Date.now();
+    const recent = (hits.get(req.ip) || []).filter(t => t > now - windowMs);
+    if (recent.length >= max) {
+      return res.status(429).json({ error: 'too many requests' });
+    }
+    recent.push(now);
+    hits.set(req.ip, recent);
+    next();
+  };
+}
+
+const chatLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 40 }); // 40/hour per IP
 
 // Redirect .com to .bar
 app.use((req, res, next) => {
@@ -238,11 +268,27 @@ ${CURRENT_OBSESSION}
 When you deliver a full recipe, always append [RECIPE] on a new line at the very end. Nothing after it.`;
 
 // ── existing web chat endpoint ──────────────────────────────────────────────
-app.post('/api/chat', async (req, res) => {
+app.post('/api/chat', chatLimiter, async (req, res) => {
   const { messages } = req.body;
 
   if (!messages || !Array.isArray(messages)) {
     return res.status(400).json({ error: 'messages array required' });
+  }
+
+  // Keep this a Collin conversation, not a free general-purpose Claude.
+  // Plain text only, user/assistant roles only, capped length.
+  if (messages.length > 30) {
+    return res.status(400).json({ error: 'conversation too long' });
+  }
+  const validShape = messages.every(m =>
+    m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string'
+  );
+  if (!validShape) {
+    return res.status(400).json({ error: 'bad message' });
+  }
+  const totalChars = messages.reduce((n, m) => n + m.content.length, 0);
+  if (totalChars > 12000) {
+    return res.status(400).json({ error: 'conversation too long' });
   }
 
   try {
