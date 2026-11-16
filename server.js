@@ -32,6 +32,10 @@ async function initDb() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS email_opt_in_at TIMESTAMP;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS email_unsubscribed_at TIMESTAMP;
+    -- What Collin saw in their last bar photo, as text. The photo itself
+    -- is never stored.
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS bar_inventory TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS bar_inventory_updated_at TIMESTAMP;
 
     CREATE TABLE IF NOT EXISTS recipes (
       id              SERIAL PRIMARY KEY,
@@ -358,6 +362,162 @@ Rules for how he carries it:
 ${CURRENT_OBSESSION}
 
 When you deliver a full recipe, always append [RECIPE] on a new line at the very end. Nothing after it.`;
+
+// ── Bar photos ──────────────────────────────────────────────────────────────
+// Someone texts a photo of their bar. A separate vision call turns it into a
+// plain text list of what's on the shelf, which is saved on the user and
+// shown to Collin on every reply after that. The photo itself is never
+// stored, only the list.
+//
+// Photos within mergeWindowMinutes of the last one add to the list (one
+// shelf at a time). After that, a new photo replaces it, since the bar has
+// probably changed.
+const BAR_PHOTO = {
+  maxImages: 4,
+  maxBytes: 5 * 1024 * 1024,   // Anthropic's per-image limit
+  mergeWindowMinutes: 30,
+  maxInventoryChars: 2000,
+  types: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+};
+
+const BAR_PHOTO_PROMPT = `You read photos of home bars for a cocktail bartender. Return only JSON, no other text:
+{"is_bar": true or false, "inventory": "...", "description": "..."}
+
+is_bar: true if the photos show bottles, a bar cart, a liquor cabinet, mixers, or cocktail ingredients. False for anything else.
+
+inventory: if is_bar, a plain text list of what you can see, one line per category, like:
+Bourbon: Buffalo Trace, Old Forester 1920
+Amaro: Cynar, Montenegro
+Bitters: Angostura, Peychaud's
+Use brand and expression when the label is readable. If you can't read a label, describe the bottle briefly and say so, like "green bottle, maybe Chartreuse". Never invent a brand. Note a bottle that's nearly empty. Include syrups, citrus, garnishes and tools if they're visible. No commentary. Empty string if not a bar.
+
+description: one short plain sentence on what the photos show.`;
+
+function normalizeImageType(type) {
+  const t = (type || '').toLowerCase().split(';')[0].trim();
+  return t === 'image/jpg' ? 'image/jpeg' : t;
+}
+
+async function fetchImageAsBase64(item) {
+  if (!/^https:\/\//.test(item.url || '')) throw new Error('media url is not https');
+  const res = await fetch(item.url);
+  if (!res.ok) throw new Error(`media fetch failed: ${res.status}`);
+  const buf = Buffer.from(await res.arrayBuffer());
+  if (buf.length > BAR_PHOTO.maxBytes) throw new Error(`image too large: ${buf.length} bytes`);
+  return {
+    type: 'image',
+    source: {
+      type: 'base64',
+      media_type: normalizeImageType(item.content_type || res.headers.get('content-type')),
+      data: buf.toString('base64'),
+    },
+  };
+}
+
+// Returns { isBar, inventory, description }. Throws if the images can't be
+// fetched or read, so the caller can tell Collin the photo didn't come through.
+async function readBarPhotos(images, existingInventory) {
+  const imageBlocks = await Promise.all(images.map(fetchImageAsBase64));
+
+  const ask = existingInventory
+    ? `They sent another photo a few minutes ago. Here's what was already on the list:\n${existingInventory}\n\nReturn the combined list: everything already there plus anything new in these photos.`
+    : 'Read these photos.';
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-5',
+      max_tokens: 1500,
+      system: BAR_PHOTO_PROMPT,
+      messages: [{ role: 'user', content: [...imageBlocks, { type: 'text', text: ask }] }],
+    }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(`Anthropic vision error: ${JSON.stringify(data)}`);
+
+  const text = data.content?.find(b => b.type === 'text')?.text || '';
+  const json = text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
+  const parsed = JSON.parse(json);
+
+  return {
+    isBar: parsed.is_bar === true && Boolean(parsed.inventory?.trim()),
+    inventory: (parsed.inventory || '').trim().slice(0, BAR_PHOTO.maxInventoryChars),
+    description: (parsed.description || '').trim().slice(0, 300),
+  };
+}
+
+// Handles whatever media came in and saves the inventory if it's a bar.
+// Returns a system block telling Collin what just happened, so he can
+// react to the photo in his own voice. Never throws.
+async function handleIncomingMedia(userPhone, media) {
+  const images = media
+    .filter(m => BAR_PHOTO.types.includes(normalizeImageType(m.content_type)))
+    .slice(0, BAR_PHOTO.maxImages);
+
+  if (images.length === 0) {
+    return `## WHAT THEY JUST SENT
+They sent a file you can't open, like a video, voice memo, or document. Say so in a short line. If they were trying to show you their bar, a photo works.`;
+  }
+
+  if (media.length > images.length) {
+    console.log(`Bar photo: using ${images.length} of ${media.length} attachments`);
+  }
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT bar_inventory,
+              bar_inventory_updated_at > now() - make_interval(mins => $2) AS recent
+       FROM users WHERE phone_number = $1`,
+      [userPhone, BAR_PHOTO.mergeWindowMinutes]
+    );
+    const existing = rows[0]?.recent ? rows[0].bar_inventory : null;
+
+    const result = await readBarPhotos(images, existing);
+    console.log(`Bar photo: read ${images.length} image(s), is_bar=${result.isBar}, merged=${Boolean(existing)}`);
+
+    if (!result.isBar) {
+      return `## WHAT THEY JUST SENT
+They just texted a photo, but it isn't their bar. It shows: ${result.description || 'something other than bottles'}. React to it briefly like a person would, then keep going. Don't treat it as their bar.`;
+    }
+
+    await pool.query(
+      `UPDATE users SET bar_inventory = $2, bar_inventory_updated_at = now() WHERE phone_number = $1`,
+      [userPhone, result.inventory]
+    );
+
+    return `## WHAT THEY JUST SENT
+They just texted a photo of their bar. What you can see is under THEIR BAR below. React like a bartender looking at someone's shelf: notice one or two things that are actually interesting, then answer whatever they asked. If they didn't ask anything, pitch from what's there. Don't read the list back to them. If a label was hard to read and it matters, ask about that one bottle.`;
+  } catch (err) {
+    console.error('Bar photo: failed to read:', err.message);
+    return `## WHAT THEY JUST SENT
+They just texted a photo, but it didn't come through on your end. Tell them in a short line and ask them to send it again.`;
+  }
+}
+
+// Standing context about their bar, added to every SMS reply once they've
+// sent a photo. Lives outside the cached system block so caching still works.
+function barInventoryContext(inventory, ageSeconds) {
+  if (!inventory) return '';
+  return `## THEIR BAR
+From a photo they sent ${describeGap(ageSeconds)} ago:
+${inventory}
+
+This is what you saw on their shelf, not everything they own, and it may be out of date. Lean on it when you pitch. It's still fine to suggest one thing they'd need to grab. Never recite the list back to them.
+
+Notes like [sent a photo] in the history are added by the system. Never write them yourself.`;
+}
+
+function describeMediaNote(media) {
+  const imageCount = media.filter(m => normalizeImageType(m.content_type).startsWith('image/')).length;
+  if (imageCount === 0) return '[sent a file]';
+  return imageCount === 1 ? '[sent a photo]' : `[sent ${imageCount} photos]`;
+}
 
 // ── existing web chat endpoint ──────────────────────────────────────────────
 app.post('/api/chat', chatLimiter, async (req, res) => {
@@ -1106,13 +1266,16 @@ app.post('/sms-telnyx', async (req, res) => {
 
   const payload = event.payload;
   const userPhone = payload?.from?.phone_number;
-  const incomingMessage = payload?.text?.trim();
+  const incomingMessage = payload?.text?.trim() || '';
+  // MMS attachments. A photo can arrive with no text at all.
+  const media = Array.isArray(payload?.media) ? payload.media : [];
 
   console.log(`=== Telnyx /sms-telnyx hit ===`);
   console.log(`From: ${userPhone}`);
   console.log(`Body: ${incomingMessage}`);
+  if (media.length) console.log(`Media: ${media.map(m => m.content_type).join(', ')}`);
 
-  if (!incomingMessage || !userPhone) {
+  if ((!incomingMessage && media.length === 0) || !userPhone) {
     console.log('Telnyx: missing phone or message body — exiting');
     return;
   }
@@ -1199,10 +1362,16 @@ app.post('/sms-telnyx', async (req, res) => {
     return;
   }
 
+  // History is text only. A photo shows up as a short note so Collin can
+  // see later that one was sent, without the image itself being kept.
+  const storedMessage = media.length
+    ? [incomingMessage, describeMediaNote(media)].filter(Boolean).join('\n')
+    : incomingMessage;
+
   try {
     await pool.query(
       `INSERT INTO conversations (phone_number, role, content) VALUES ($1, 'user', $2)`,
-      [userPhone, incomingMessage]
+      [userPhone, storedMessage]
     );
   } catch (err) {
     console.error('Telnyx: error saving incoming message:', err.message);
@@ -1217,15 +1386,24 @@ app.post('/sms-telnyx', async (req, res) => {
     return;
   }
 
-  // If this person is mid-onboarding, their reply belongs to that state
-  // machine, not to Collin. Handles the send and DB update itself.
-  try {
-    const handledByOnboarding = await handleOnboardingReply(userPhone, incomingMessage);
-    if (handledByOnboarding) {
-      return;
+  // A photo mid-onboarding isn't an answer to the script's question, and
+  // it tells Collin more than the bar_type question would anyway. Drop
+  // them out of the script (answers so far stay saved) and let Collin take it.
+  let mediaContext = '';
+  if (media.length) {
+    await releaseOnboarding(userPhone);
+    mediaContext = await handleIncomingMedia(userPhone, media);
+  } else {
+    // If this person is mid-onboarding, their reply belongs to that state
+    // machine, not to Collin. Handles the send and DB update itself.
+    try {
+      const handledByOnboarding = await handleOnboardingReply(userPhone, incomingMessage);
+      if (handledByOnboarding) {
+        return;
+      }
+    } catch (err) {
+      console.error('Onboarding: unexpected error, falling through to Collin:', err.message);
     }
-  } catch (err) {
-    console.error('Onboarding: unexpected error, falling through to Collin:', err.message);
   }
 
   // Pull the last MAX_HISTORY messages, oldest first, for the model call.
@@ -1233,6 +1411,7 @@ app.post('/sms-telnyx', async (req, res) => {
   // doesn't depend on how Node parses the timezone-less created_at column.
   let history;
   let timeContext = '';
+  let barContext = '';
   try {
     const { rows } = await pool.query(
       `SELECT role, content, age_seconds FROM (
@@ -1245,12 +1424,19 @@ app.post('/sms-telnyx', async (req, res) => {
        ) recent ORDER BY created_at ASC`,
       [userPhone, MAX_HISTORY]
     );
-    const tzRow = await pool.query(`SELECT timezone FROM users WHERE phone_number = $1`, [userPhone]);
-    const timezone = tzRow.rows[0]?.timezone || 'America/New_York';
+    const userRow = await pool.query(
+      `SELECT timezone, bar_inventory,
+              EXTRACT(EPOCH FROM (now() - bar_inventory_updated_at))::float AS inventory_age_seconds
+       FROM users WHERE phone_number = $1`,
+      [userPhone]
+    );
+    const user = userRow.rows[0] || {};
+    const timezone = user.timezone || 'America/New_York';
     ({ history, timeContext } = addTimeContext(rows, timezone));
+    barContext = barInventoryContext(user.bar_inventory, user.inventory_age_seconds);
   } catch (err) {
     console.error('Telnyx: error loading history, falling back to this message only:', err.message);
-    history = [{ role: 'user', content: incomingMessage }];
+    history = [{ role: 'user', content: storedMessage }];
   }
 
   const telnyxApiKey = process.env.TELNYX_API_KEY;
@@ -1280,8 +1466,11 @@ app.post('/sms-telnyx', async (req, res) => {
             cache_control: { type: 'ephemeral', ttl: '1h' },
           },
           // After the cached block on purpose: it changes every message,
-          // and putting it first would break the prompt cache.
+          // and putting it first would break the prompt cache. Same for
+          // the photo and bar blocks, which are per person.
           ...(timeContext ? [{ type: 'text', text: timeContext }] : []),
+          ...(mediaContext ? [{ type: 'text', text: mediaContext }] : []),
+          ...(barContext ? [{ type: 'text', text: barContext }] : []),
         ],
         messages: history,
       }),
