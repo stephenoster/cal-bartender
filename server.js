@@ -1707,11 +1707,45 @@ app.get('/admin/api/stats', async (req, res) => {
       GROUP BY onboarding_done
     `);
 
+    // Up to 20 most active people: texts they sent in the last 30 days,
+    // then most recent text as the tie-breaker. Only the last 4 digits of
+    // a phone number ever leave the database here.
+    const activeResult = await pool.query(`
+      SELECT
+        right(u.phone_number, 4) AS phone_last4,
+        u.name,
+        u.onboarding_done,
+        COALESCE(u.opted_out, false) AS opted_out,
+        (u.bar_inventory_updated_at IS NOT NULL) AS sent_bar_photo,
+        m.messages_30d,
+        m.messages_total,
+        EXTRACT(EPOCH FROM (now() - m.last_message_at))::float AS last_active_seconds,
+        COALESCE(r.drinks, 0)::int AS drinks
+      FROM users u
+      JOIN (
+        SELECT phone_number,
+               (COUNT(*) FILTER (WHERE created_at > now() - interval '30 days'))::int AS messages_30d,
+               COUNT(*)::int AS messages_total,
+               MAX(created_at) AS last_message_at
+        FROM conversations
+        WHERE role = 'user'
+        GROUP BY phone_number
+      ) m ON m.phone_number = u.phone_number
+      LEFT JOIN (
+        SELECT phone_number, COUNT(*) AS drinks
+        FROM recipes
+        GROUP BY phone_number
+      ) r ON r.phone_number = u.phone_number
+      ORDER BY m.messages_30d DESC, m.last_message_at DESC
+      LIMIT 20
+    `);
+
     res.json({
       total,
       barTypes,
       dResponses,
       onboarding: onboardingResult.rows,
+      activeUsers: activeResult.rows,
     });
   } catch (err) {
     console.error('Error fetching admin stats:', err.message);

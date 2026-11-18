@@ -3,317 +3,454 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin — Collin Thomas</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400&display=swap" rel="stylesheet" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#FF683C">
+  <title>Admin · Collin Thomas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gloock&family=Schibsted+Grotesk:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --gunmetal: #32373B;
-      --iron: #4A5859;
-      --almond: #F4D6CC;
-      --honey: #F4B860;
-      --brick: #C83E4D;
-      --off-white: #F9F4F0;
-    }
-
+    /* Matches the landing page: orange band, zinc page, ink type.
+       orange #FF683C · ink #1B1714 · zinc #EEEFEB · paper #FFF
+       muted #57514B · deep #C43A17 · error #B3261E */
     * { margin: 0; padding: 0; box-sizing: border-box; }
-
+    html, body { background: #EEEFEB; color: #1B1714; }
     body {
-      background-color: var(--gunmetal);
-      color: var(--almond);
-      font-family: 'DM Sans', sans-serif;
-      font-weight: 300;
+      font-family: 'Schibsted Grotesk', Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
       min-height: 100vh;
-    }
-
-    body::before {
-      content: '';
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      height: 3px;
-      background: linear-gradient(90deg, var(--brick), var(--honey));
-      z-index: 10;
-    }
-
-    main {
-      max-width: 560px;
-      margin: 0 auto;
-      padding: 64px 24px 100px;
-    }
-
-    h1 {
-      font-family: 'Playfair Display', serif;
-      font-size: 1.8rem;
-      font-weight: 600;
-      color: var(--off-white);
-      margin-bottom: 40px;
-    }
-
-    /* ── Gate ── */
-    #gate {
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      max-width: 320px;
     }
+    a { color: inherit; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+    a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid #1B1714; outline-offset: 2px; }
+    input, button { font: inherit; }
+    .mono { font-family: 'Spline Sans Mono', ui-monospace, Menlo, monospace; }
 
-    #gate input {
-      padding: 14px 16px;
-      background: rgba(255,255,255,0.07);
-      border: 1px solid rgba(244,214,204,0.2);
-      border-radius: 10px;
-      font-family: 'DM Mono', monospace;
-      font-size: 0.95rem;
-      color: var(--almond);
-      outline: none;
+    /* ── Band ── */
+    .band {
+      background: #FF683C;
+      padding: 0 max(16px, 5vw) clamp(32px, 5vw, 56px);
     }
-
-    #gate input:focus { border-color: rgba(244,184,96,0.5); }
-
-    #gate button {
-      padding: 14px 20px;
-      background: var(--honey);
-      color: var(--gunmetal);
-      border: none;
-      border-radius: 10px;
-      font-size: 0.95rem;
-      font-weight: 500;
+    .top {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 20px 0;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px 24px;
+    }
+    .brand-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+    .brand img { display: block; width: auto; }
+    .chip {
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 5px 9px;
+      border: 1.5px solid #1B1714;
+      border-radius: 3px;
+    }
+    .lock-btn {
+      display: none;
+      border: 0;
+      background: none;
+      color: #1B1714;
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: underline;
+      text-underline-offset: 3px;
       cursor: pointer;
     }
-
-    #gateError {
-      display: none;
-      font-size: 0.8rem;
-      color: var(--brick);
+    .lock-btn.visible { display: block; }
+    .title {
+      max-width: 1040px;
+      margin: clamp(20px, 4vw, 48px) auto 0;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px 32px;
     }
-
-    #gateError.visible { display: block; }
-
-    /* ── Dashboard ── */
-    #dashboard { display: none; }
-    #dashboard.visible { display: block; }
-
-    .total-card {
-      margin-bottom: 40px;
-    }
-
-    .total-label {
-      font-size: 0.7rem;
-      letter-spacing: 0.14em;
+    .label {
+      font-family: 'Spline Sans Mono', ui-monospace, Menlo, monospace;
+      font-size: 12px;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
-      color: var(--honey);
-      margin-bottom: 8px;
     }
-
+    h1 {
+      font-family: 'Gloock', Georgia, serif;
+      font-weight: 400;
+      font-size: clamp(44px, 7vw, 80px);
+      line-height: 0.95;
+      letter-spacing: -0.015em;
+      margin-top: 14px;
+    }
+    .total { display: none; }
+    .total.visible { display: block; }
     .total-number {
-      font-family: 'Playfair Display', serif;
-      font-size: 3.4rem;
-      font-weight: 600;
-      color: var(--off-white);
+      font-family: 'Gloock', Georgia, serif;
+      font-size: clamp(56px, 8vw, 96px);
+      line-height: 0.9;
+    }
+    .total-label { font-size: 15px; font-weight: 600; margin-top: 6px; }
+
+    /* ── Page ── */
+    main {
+      flex: 1;
+      width: 100%;
+      max-width: calc(1040px + 2 * max(16px, 5vw));
+      margin: 0 auto;
+      padding: clamp(32px, 5vw, 56px) max(16px, 5vw) clamp(56px, 8vw, 96px);
+    }
+    .card {
+      background: #FFF;
+      border-radius: 6px;
+      padding: clamp(20px, 3vw, 32px);
+      box-shadow: 0 1px 0 rgba(27,23,20,.18);
+      min-width: 0;
+    }
+    .card-head { display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px; }
+    h2 {
+      font-family: 'Gloock', Georgia, serif;
+      font-weight: 400;
+      font-size: clamp(28px, 3vw, 34px);
       line-height: 1;
     }
+    .card-head p { font-size: 15px; line-height: 1.45; color: #57514B; }
 
-    section { margin-bottom: 40px; }
-
-    h2 {
-      font-family: 'Playfair Display', serif;
-      font-size: 1.05rem;
-      font-weight: 600;
-      color: var(--honey);
-      margin-bottom: 16px;
+    /* ── Gate ── */
+    #gate { max-width: 420px; }
+    #gate form { display: flex; flex-direction: column; gap: 12px; }
+    .field-label { font-size: 15px; font-weight: 600; }
+    .input {
+      height: 52px;
+      width: 100%;
+      padding: 0 14px;
+      border: 1.5px solid rgba(27,23,20,.28);
+      border-radius: 4px;
+      background: #FFF;
+      color: #1B1714;
+      font-size: 17px;
     }
+    .btn {
+      height: 56px;
+      width: 100%;
+      border: 0;
+      border-radius: 4px;
+      background: #1B1714;
+      color: #FFF;
+      font-size: 17px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn:hover { background: #3A322C; }
+    .btn:disabled { opacity: 0.6; cursor: default; }
+    .err { display: none; font-size: 14px; font-weight: 600; color: #B3261E; }
+    .err.visible { display: block; }
 
+    /* ── Dashboard ── */
+    #dashboard { display: none; flex-direction: column; gap: 24px; }
+    #dashboard.visible { display: flex; }
+    .grid { display: flex; flex-wrap: wrap; gap: 24px; }
+    .grid > .card { flex: 1 1 320px; }
+
+    /* Bars */
     .bar-row {
-      display: flex;
+      display: grid;
+      grid-template-columns: minmax(64px, 110px) minmax(0, 1fr) 36px;
       align-items: center;
       gap: 12px;
-      margin-bottom: 10px;
+      padding: 7px 0;
     }
+    .bar-name { font-size: 15px; font-weight: 500; }
+    .bar-track { height: 10px; background: rgba(27,23,20,.08); border-radius: 2px; overflow: hidden; }
+    .bar-fill { height: 100%; background: #FF683C; border-radius: 2px; }
+    .bar-count { text-align: right; font-size: 14px; font-variant-numeric: tabular-nums; }
 
-    .bar-name {
-      width: 90px;
-      flex-shrink: 0;
-      font-size: 0.82rem;
-      color: rgba(244,214,204,0.75);
-      text-transform: capitalize;
-    }
-
-    .bar-track {
-      flex: 1;
-      height: 10px;
-      background: rgba(255,255,255,0.06);
-      border-radius: 6px;
-      overflow: hidden;
-    }
-
-    .bar-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--brick), var(--honey));
-      border-radius: 6px;
-    }
-
-    .bar-count {
-      width: 32px;
-      flex-shrink: 0;
-      text-align: right;
-      font-family: 'DM Mono', monospace;
-      font-size: 0.82rem;
-      color: rgba(244,214,204,0.6);
-    }
-
-    #dResponses {
-      margin-top: 16px;
-      padding-top: 14px;
-      border-top: 1px solid rgba(244,214,204,0.1);
-    }
-
-    .d-responses-label {
-      font-size: 0.72rem;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: var(--iron);
-      margin-bottom: 10px;
-    }
-
-    .d-response-row {
+    .responses { margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(27,23,20,.16); }
+    .responses[hidden] { display: none; }
+    .responses .label { color: #57514B; margin-bottom: 8px; }
+    .response-row {
       display: flex;
       justify-content: space-between;
       gap: 12px;
-      font-size: 0.82rem;
-      color: rgba(244,214,204,0.7);
-      padding: 5px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 15px;
+      line-height: 1.45;
+      color: #3F3A35;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(27,23,20,.08);
     }
+    .response-row:last-child { border-bottom: 0; }
+    .response-count { flex-shrink: 0; font-size: 14px; }
 
-    .d-response-text {
-      flex: 1;
+    /* Active users table */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; min-width: 620px; border-collapse: collapse; font-size: 15px; }
+    th {
+      font-family: 'Spline Sans Mono', ui-monospace, Menlo, monospace;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #57514B;
+      text-align: left;
+      padding: 0 12px 10px 0;
+      border-bottom: 1px solid #1B1714;
+      white-space: nowrap;
     }
-
-    .d-response-count {
-      flex-shrink: 0;
-      font-family: 'DM Mono', monospace;
-      color: rgba(244,214,204,0.45);
+    td {
+      padding: 12px 12px 12px 0;
+      border-bottom: 1px solid rgba(27,23,20,.12);
+      vertical-align: middle;
     }
-
-    #loadError {
-      display: none;
-      font-size: 0.85rem;
-      color: var(--brick);
+    tr:last-child td { border-bottom: 0; }
+    th.num, td.num { text-align: right; }
+    td.num { font-family: 'Spline Sans Mono', ui-monospace, Menlo, monospace; font-size: 14px; font-variant-numeric: tabular-nums; }
+    .rank { width: 28px; color: #57514B; font-family: 'Spline Sans Mono', ui-monospace, Menlo, monospace; font-size: 13px; }
+    .who { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+    .who-name { font-weight: 600; }
+    .who-name.none { font-weight: 400; color: #57514B; font-style: italic; }
+    .who-phone { font-size: 13px; color: #57514B; }
+    .tag {
+      font-family: 'Spline Sans Mono', ui-monospace, Menlo, monospace;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 3px;
+      background: #EEEFEB;
+      color: #57514B;
+      white-space: nowrap;
     }
+    .tag.out { background: #FDE8D9; color: #C43A17; }
+    .when { white-space: nowrap; color: #3F3A35; }
+    .photo-yes { font-weight: 600; color: #C43A17; }
+    .photo-no { color: #8A847D; }
+    .empty { font-size: 15px; color: #57514B; padding: 8px 0; }
+    .table-note { margin-top: 14px; font-size: 13px; line-height: 1.5; color: #57514B; }
 
-    #loadError.visible { display: block; }
-
-    footer {
-      font-size: 0.72rem;
-      color: var(--iron);
+    /* ── Footer ── */
+    .foot {
+      background: #1B1714;
+      color: #BDB8B1;
+      padding: 24px max(16px, 5vw);
+      font-size: 13px;
+      line-height: 1.5;
     }
+    .foot-in { max-width: 1040px; margin: 0 auto; }
   </style>
 </head>
 <body>
 
-  <main>
-    <h1>Collin — Admin</h1>
-
-    <div id="gate">
-      <input type="password" id="tokenInput" placeholder="Admin token" autocomplete="off" />
-      <button id="unlockBtn">Unlock</button>
-      <div id="gateError">Wrong token, or ADMIN_TOKEN isn't set on the server.</div>
+  <div class="band">
+    <header class="top">
+      <div class="brand-row">
+        <a href="/" class="brand" aria-label="Collin Thomas home">
+          <img src="/logo-mark.svg" alt="" height="32" style="height:32px;width:auto">
+          <img src="/logo-wordmark.svg" alt="Collin Thomas" height="20" style="height:20px;width:auto">
+        </a>
+        <span class="chip mono">Admin</span>
+      </div>
+      <button type="button" class="lock-btn" id="lockBtn">Lock</button>
+    </header>
+    <div class="title">
+      <div>
+        <p class="label">Behind the bar</p>
+        <h1>Dashboard</h1>
+      </div>
+      <div class="total" id="totalBlock">
+        <div class="total-number" id="totalNumber">0</div>
+        <div class="total-label">total signups</div>
+      </div>
     </div>
+  </div>
+
+  <main>
+    <section class="card" id="gate">
+      <form id="gateForm">
+        <label class="field-label" for="tokenInput">Admin token</label>
+        <input class="input mono" type="password" id="tokenInput" autocomplete="off" />
+        <button class="btn" type="submit" id="unlockBtn">Unlock</button>
+        <div class="err" id="gateError">Wrong token, or ADMIN_TOKEN isn't set on the server.</div>
+      </form>
+    </section>
 
     <div id="dashboard">
-      <div class="total-card">
-        <div class="total-label">Total signups</div>
-        <div class="total-number" id="totalNumber">—</div>
+      <section class="card">
+        <div class="card-head">
+          <h2>Most active</h2>
+          <p>Up to 20 people, ranked by texts they sent in the last 30 days.</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th aria-label="Rank"></th>
+                <th>Person</th>
+                <th class="num">Texts, 30 days</th>
+                <th class="num">Texts, all time</th>
+                <th>Last text</th>
+                <th class="num">Drinks</th>
+                <th>Bar photo</th>
+              </tr>
+            </thead>
+            <tbody id="activeBody"></tbody>
+          </table>
+        </div>
+        <p class="table-note">Counts only texts people sent, not Collin's replies. Phone numbers show the last 4 digits.</p>
+      </section>
+
+      <div class="grid">
+        <section class="card">
+          <div class="card-head"><h2>Bar type</h2></div>
+          <div id="barTypeChart"></div>
+          <div class="responses" id="dResponses" hidden></div>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><h2>Onboarding</h2></div>
+          <div id="onboardingChart"></div>
+        </section>
       </div>
-
-      <section>
-        <h2>Bar type</h2>
-        <div id="barTypeChart"></div>
-        <div id="dResponses"></div>
-      </section>
-
-      <section>
-        <h2>Onboarding</h2>
-        <div id="onboardingChart"></div>
-      </section>
-
-      <div id="loadError"></div>
     </div>
-
-    <footer>Data pulled live from the users table.</footer>
   </main>
+
+  <footer class="foot">
+    <div class="foot-in">Data pulled live from Collin's database.</div>
+  </footer>
 
   <script>
     const gate = document.getElementById('gate');
+    const gateForm = document.getElementById('gateForm');
     const dashboard = document.getElementById('dashboard');
     const tokenInput = document.getElementById('tokenInput');
     const unlockBtn = document.getElementById('unlockBtn');
     const gateError = document.getElementById('gateError');
-    const loadError = document.getElementById('loadError');
+    const lockBtn = document.getElementById('lockBtn');
+    const totalBlock = document.getElementById('totalBlock');
 
     async function fetchStats(token) {
       const res = await fetch('/admin/api/stats', {
         headers: { 'x-admin-token': token }
       });
-      if (!res.ok) throw new Error('unauthorized');
+      if (!res.ok) throw new Error(res.status === 401 ? 'unauthorized' : 'failed');
       return res.json();
     }
 
-    function renderBars(container, rows, labelKey) {
+    // Builds an element with text content only, so anything people typed
+    // (names, free-text answers) is never treated as HTML.
+    function el(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined && text !== null) node.textContent = text;
+      return node;
+    }
+
+    function renderBars(container, rows) {
       container.innerHTML = '';
-      const max = Math.max(...rows.map(r => parseInt(r.count, 10)), 1);
+      const max = Math.max(...rows.map(r => r.count), 1);
 
       rows.forEach(row => {
-        const count = parseInt(row.count, 10);
-        const pct = Math.round((count / max) * 100);
-
-        const rowEl = document.createElement('div');
-        rowEl.className = 'bar-row';
-        rowEl.innerHTML = `
-          <div class="bar-name">${row[labelKey]}</div>
-          <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
-          <div class="bar-count">${count}</div>
-        `;
+        const rowEl = el('div', 'bar-row');
+        rowEl.appendChild(el('div', 'bar-name', row.label));
+        const track = el('div', 'bar-track');
+        const fill = el('div', 'bar-fill');
+        fill.style.width = Math.round((row.count / max) * 100) + '%';
+        track.appendChild(fill);
+        rowEl.appendChild(track);
+        rowEl.appendChild(el('div', 'bar-count mono', row.count));
         container.appendChild(rowEl);
       });
     }
 
     function renderDResponses(container, dResponses) {
       container.innerHTML = '';
-      if (!dResponses || dResponses.length === 0) return;
-
-      const label = document.createElement('div');
-      label.className = 'd-responses-label';
-      label.textContent = 'D includes these actual responses';
-      container.appendChild(label);
-
+      if (!dResponses || dResponses.length === 0) {
+        container.hidden = true;
+        return;
+      }
+      container.hidden = false;
+      container.appendChild(el('p', 'label', 'D includes these answers'));
       dResponses.forEach(item => {
-        const row = document.createElement('div');
-        row.className = 'd-response-row';
-        row.innerHTML = `
-          <div class="d-response-text">${escapeHtml(item.response)}</div>
-          <div class="d-response-count">${item.count}</div>
-        `;
+        const row = el('div', 'response-row');
+        row.appendChild(el('span', '', item.response));
+        row.appendChild(el('span', 'response-count mono', item.count));
         container.appendChild(row);
       });
     }
 
-    function escapeHtml(str) {
-      const div = document.createElement('div');
-      div.textContent = str;
-      return div.innerHTML;
+    function timeAgo(seconds) {
+      if (seconds === null || seconds === undefined) return 'never';
+      const s = Math.max(0, seconds);
+      if (s < 60 * 60) return Math.max(1, Math.round(s / 60)) + 'm ago';
+      if (s < 60 * 60 * 24) return Math.round(s / 3600) + 'h ago';
+      if (s < 60 * 60 * 24 * 30) return Math.round(s / 86400) + 'd ago';
+      return new Date(Date.now() - s * 1000)
+        .toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function renderActiveUsers(tbody, users) {
+      tbody.innerHTML = '';
+      if (!users || users.length === 0) {
+        const tr = el('tr');
+        const td = el('td', 'empty', 'No one has texted Collin yet.');
+        td.colSpan = 7;
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        return;
+      }
+
+      users.forEach((u, i) => {
+        const tr = el('tr');
+        tr.appendChild(el('td', 'rank', i + 1));
+
+        const who = el('div', 'who');
+        const name = u.name && u.name.trim();
+        who.appendChild(el('span', name ? 'who-name' : 'who-name none', name || 'No name yet'));
+        who.appendChild(el('span', 'who-phone mono', '•••' + (u.phone_last4 || '')));
+        if (u.opted_out) who.appendChild(el('span', 'tag out', 'Opted out'));
+        else if (!u.onboarding_done) who.appendChild(el('span', 'tag', 'Onboarding'));
+        const whoCell = el('td');
+        whoCell.appendChild(who);
+        tr.appendChild(whoCell);
+
+        tr.appendChild(el('td', 'num', u.messages_30d));
+        tr.appendChild(el('td', 'num', u.messages_total));
+        tr.appendChild(el('td', 'when', timeAgo(u.last_active_seconds)));
+        tr.appendChild(el('td', 'num', u.drinks));
+        tr.appendChild(el('td', u.sent_bar_photo ? 'photo-yes' : 'photo-no', u.sent_bar_photo ? 'Yes' : 'No'));
+        tbody.appendChild(tr);
+      });
     }
 
     function renderDashboard(data) {
       document.getElementById('totalNumber').textContent = data.total;
 
-      renderBars(document.getElementById('barTypeChart'), data.barTypes, 'bar_type');
+      renderBars(
+        document.getElementById('barTypeChart'),
+        data.barTypes.map(r => ({ label: r.bar_type, count: parseInt(r.count, 10) }))
+      );
       renderDResponses(document.getElementById('dResponses'), data.dResponses);
 
-      const onboardingRows = data.onboarding.map(row => ({
-        label: row.onboarding_done ? 'completed' : 'in progress',
-        count: row.count
-      }));
-      renderBars(document.getElementById('onboardingChart'), onboardingRows, 'label');
+      renderBars(
+        document.getElementById('onboardingChart'),
+        data.onboarding.map(r => ({
+          label: r.onboarding_done ? 'Completed' : 'In progress',
+          count: parseInt(r.count, 10)
+        }))
+      );
+
+      renderActiveUsers(document.getElementById('activeBody'), data.activeUsers);
+    }
+
+    function showDashboard() {
+      gate.style.display = 'none';
+      dashboard.classList.add('visible');
+      totalBlock.classList.add('visible');
+      lockBtn.classList.add('visible');
     }
 
     async function tryUnlock() {
@@ -326,24 +463,33 @@
 
       try {
         const data = await fetchStats(token);
-        sessionStorage.setItem('collinAdminToken', token);
-        gate.style.display = 'none';
-        dashboard.classList.add('visible');
+        try { sessionStorage.setItem('collinAdminToken', token); } catch (e) {}
+        tokenInput.value = '';
+        showDashboard();
         renderDashboard(data);
       } catch (err) {
+        gateError.textContent = err.message === 'unauthorized'
+          ? "Wrong token, or ADMIN_TOKEN isn't set on the server."
+          : "Couldn't load the numbers. Try again in a minute.";
         gateError.classList.add('visible');
         unlockBtn.disabled = false;
         unlockBtn.textContent = 'Unlock';
       }
     }
 
-    unlockBtn.addEventListener('click', tryUnlock);
-    tokenInput.addEventListener('keydown', e => {
-      if (e.key === 'Enter') tryUnlock();
+    gateForm.addEventListener('submit', e => {
+      e.preventDefault();
+      tryUnlock();
+    });
+
+    lockBtn.addEventListener('click', () => {
+      try { sessionStorage.removeItem('collinAdminToken'); } catch (e) {}
+      location.reload();
     });
 
     // Auto-unlock if a token's already stored for this tab
-    const storedToken = sessionStorage.getItem('collinAdminToken');
+    let storedToken = null;
+    try { storedToken = sessionStorage.getItem('collinAdminToken'); } catch (e) {}
     if (storedToken) {
       tokenInput.value = storedToken;
       tryUnlock();
