@@ -36,6 +36,11 @@ async function initDb() {
     -- is never stored.
     ALTER TABLE users ADD COLUMN IF NOT EXISTS bar_inventory TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS bar_inventory_updated_at TIMESTAMP;
+    -- The same list, one entry per item with a rough fill level:
+    -- [{"category": "Bourbon", "name": "Buffalo Trace", "fill": 50}, ...]
+    -- fill is 100, 75, 50, 25, or null when it couldn't be seen.
+    -- bar_inventory is the readable version of this that Collin gets.
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS bar_bottles JSONB;
 
     CREATE TABLE IF NOT EXISTS recipes (
       id              SERIAL PRIMARY KEY,
@@ -365,33 +370,81 @@ When you deliver a full recipe, always append [RECIPE] on a new line at the very
 
 // ── Bar photos ──────────────────────────────────────────────────────────────
 // Someone texts a photo of their bar. A separate vision call turns it into a
-// plain text list of what's on the shelf, which is saved on the user and
-// shown to Collin on every reply after that. The photo itself is never
-// stored, only the list.
+// list of what's on the shelf, with a rough fill level per bottle. The list
+// is saved on the user (bar_bottles) along with a readable version
+// (bar_inventory) that Collin sees on every reply after that. The photo
+// itself is never stored, only the list.
 //
 // Photos within mergeWindowMinutes of the last one add to the list (one
-// shelf at a time). After that, a new photo replaces it, since the bar has
-// probably changed.
+// shelf at a time), and the newer photo wins for a bottle seen twice. After
+// that, a new photo replaces the list, since the bar has probably changed.
 const BAR_PHOTO = {
   maxImages: 4,
   maxBytes: 5 * 1024 * 1024,   // Anthropic's per-image limit
   mergeWindowMinutes: 30,
+  maxItems: 80,
   maxInventoryChars: 2000,
+  fillLevels: [100, 75, 50, 25],
   types: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
 };
 
 const BAR_PHOTO_PROMPT = `You read photos of home bars for a cocktail bartender. Return only JSON, no other text:
-{"is_bar": true or false, "inventory": "...", "description": "..."}
+{"is_bar": true or false, "items": [{"category": "...", "name": "...", "fill": 100, 75, 50, 25 or null}], "description": "..."}
 
 is_bar: true if the photos show bottles, a bar cart, a liquor cabinet, mixers, or cocktail ingredients. False for anything else.
 
-inventory: if is_bar, a plain text list of what you can see, one line per category, like:
-Bourbon: Buffalo Trace, Old Forester 1920
-Amaro: Cynar, Montenegro
-Bitters: Angostura, Peychaud's
-Use brand and expression when the label is readable. If you can't read a label, describe the bottle briefly and say so, like "green bottle, maybe Chartreuse". Never invent a brand. Note a bottle that's nearly empty. Include syrups, citrus, garnishes and tools if they're visible. No commentary. Empty string if not a bar.
+items: if is_bar, one entry for each bottle or ingredient you can see. Empty list if not a bar.
+- category: what kind of thing it is, like Bourbon, Gin, Amaro, Vermouth, Bitters, Syrup, Citrus, Garnish, Tool.
+- name: brand and expression when the label is readable, like "Old Forester 1920". If you can't read a label, describe the bottle briefly and say so, like "green bottle, maybe Chartreuse". Never invent a brand.
+- fill: for a bottle, roughly how full it is. 100 is full or close to it, 75 is about three quarters, 50 about half, 25 a quarter or less. Use null when you can't see the liquid line, like a dark or opaque bottle, and for anything that isn't a bottle. Don't guess.
+Include syrups, citrus, garnishes and tools if they're visible.
 
 description: one short plain sentence on what the photos show.`;
+
+const FILL_LABELS = { 100: 'full', 75: 'about 3/4 left', 50: 'about half left', 25: 'about 1/4 left or less' };
+
+// Cleans up whatever the model returned into [{category, name, fill}].
+function cleanBarItems(items) {
+  if (!Array.isArray(items)) return [];
+  return items
+    .filter(i => i && typeof i.name === 'string' && i.name.trim())
+    .slice(0, BAR_PHOTO.maxItems)
+    .map(i => ({
+      category: (typeof i.category === 'string' && i.category.trim() ? i.category.trim() : 'Other').slice(0, 40),
+      name: i.name.trim().slice(0, 80),
+      fill: BAR_PHOTO.fillLevels.includes(Number(i.fill)) ? Number(i.fill) : null,
+    }));
+}
+
+function barItemKey(item) {
+  return `${item.category}|${item.name}`.toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+// Adds what a new photo shows to the existing list. A bottle seen again takes
+// the new fill level, unless the new photo couldn't see it.
+function mergeBarItems(existing, incoming) {
+  const merged = new Map(existing.map(i => [barItemKey(i), i]));
+  for (const item of incoming) {
+    const old = merged.get(barItemKey(item));
+    merged.set(barItemKey(item), old ? { ...item, fill: item.fill ?? old.fill } : item);
+  }
+  return [...merged.values()].slice(0, BAR_PHOTO.maxItems);
+}
+
+// The readable list Collin sees, one line per category:
+// Bourbon: Buffalo Trace (about half left), Old Forester 1920 (full)
+function renderBarInventory(items) {
+  const byCategory = new Map();
+  for (const item of items) {
+    const label = item.fill ? `${item.name} (${FILL_LABELS[item.fill]})` : item.name;
+    if (!byCategory.has(item.category)) byCategory.set(item.category, []);
+    byCategory.get(item.category).push(label);
+  }
+  return [...byCategory]
+    .map(([category, names]) => `${category}: ${names.join(', ')}`)
+    .join('\n')
+    .slice(0, BAR_PHOTO.maxInventoryChars);
+}
 
 function normalizeImageType(type) {
   const t = (type || '').toLowerCase().split(';')[0].trim();
@@ -414,13 +467,16 @@ async function fetchImageAsBase64(item) {
   };
 }
 
-// Returns { isBar, inventory, description }. Throws if the images can't be
-// fetched or read, so the caller can tell Collin the photo didn't come through.
-async function readBarPhotos(images, existingInventory) {
+// Returns { isBar, items, description } for just these photos. Throws if the
+// images can't be fetched or read, so the caller can tell Collin the photo
+// didn't come through.
+async function readBarPhotos(images, existingItems) {
   const imageBlocks = await Promise.all(images.map(fetchImageAsBase64));
 
-  const ask = existingInventory
-    ? `They sent another photo a few minutes ago. Here's what was already on the list:\n${existingInventory}\n\nReturn the combined list: everything already there plus anything new in these photos.`
+  // On a follow-up photo, show the model the names already on the list so a
+  // bottle seen twice gets the same name and merges instead of doubling up.
+  const ask = existingItems?.length
+    ? `They sent another photo a few minutes ago. Already on the list:\n${existingItems.map(i => `${i.category}: ${i.name}`).join('\n')}\n\nList what's in these photos. If you see one of those again, use exactly the same category and name.`
     : 'Read these photos.';
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -445,9 +501,10 @@ async function readBarPhotos(images, existingInventory) {
   const json = text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
   const parsed = JSON.parse(json);
 
+  const items = cleanBarItems(parsed.items);
   return {
-    isBar: parsed.is_bar === true && Boolean(parsed.inventory?.trim()),
-    inventory: (parsed.inventory || '').trim().slice(0, BAR_PHOTO.maxInventoryChars),
+    isBar: parsed.is_bar === true && items.length > 0,
+    items,
     description: (parsed.description || '').trim().slice(0, 300),
   };
 }
@@ -471,24 +528,27 @@ They sent a file you can't open, like a video, voice memo, or document. Say so i
 
   try {
     const { rows } = await pool.query(
-      `SELECT bar_inventory,
+      `SELECT bar_bottles,
               bar_inventory_updated_at > now() - make_interval(mins => $2) AS recent
        FROM users WHERE phone_number = $1`,
       [userPhone, BAR_PHOTO.mergeWindowMinutes]
     );
-    const existing = rows[0]?.recent ? rows[0].bar_inventory : null;
+    const existing = rows[0]?.recent ? cleanBarItems(rows[0].bar_bottles) : null;
 
     const result = await readBarPhotos(images, existing);
-    console.log(`Bar photo: read ${images.length} image(s), is_bar=${result.isBar}, merged=${Boolean(existing)}`);
+    console.log(`Bar photo: read ${images.length} image(s), is_bar=${result.isBar}, items=${result.items.length}, merged=${Boolean(existing?.length)}`);
 
     if (!result.isBar) {
       return `## WHAT THEY JUST SENT
 They just texted a photo, but it isn't their bar. It shows: ${result.description || 'something other than bottles'}. React to it briefly like a person would, then keep going. Don't treat it as their bar.`;
     }
 
+    const items = existing?.length ? mergeBarItems(existing, result.items) : result.items;
     await pool.query(
-      `UPDATE users SET bar_inventory = $2, bar_inventory_updated_at = now() WHERE phone_number = $1`,
-      [userPhone, result.inventory]
+      `UPDATE users
+       SET bar_bottles = $2::jsonb, bar_inventory = $3, bar_inventory_updated_at = now()
+       WHERE phone_number = $1`,
+      [userPhone, JSON.stringify(items), renderBarInventory(items)]
     );
 
     return `## WHAT THEY JUST SENT
@@ -508,7 +568,7 @@ function barInventoryContext(inventory, ageSeconds) {
 From a photo they sent ${describeGap(ageSeconds)} ago:
 ${inventory}
 
-This is what you saw on their shelf, not everything they own, and it may be out of date. Lean on it when you pitch. It's still fine to suggest one thing they'd need to grab. Never recite the list back to them.
+This is what you saw on their shelf, not everything they own, and it may be out of date. How full each bottle is, in brackets, is a rough guess from the photo. Lean on it when you pitch, and if a drink needs a lot of something that's running low, say so in passing. It's still fine to suggest one thing they'd need to grab. Never recite the list back to them.
 
 Notes like [sent a photo] in the history are added by the system. Never write them yourself.`;
 }
