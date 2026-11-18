@@ -160,15 +160,16 @@
     /* Bars */
     .bar-row {
       display: grid;
-      grid-template-columns: minmax(64px, 110px) minmax(0, 1fr) 36px;
+      grid-template-columns: minmax(72px, 168px) minmax(0, 1fr) minmax(36px, auto);
       align-items: center;
       gap: 12px;
       padding: 7px 0;
     }
     .bar-name { font-size: 15px; font-weight: 500; }
     .bar-track { height: 10px; background: rgba(27,23,20,.08); border-radius: 2px; overflow: hidden; }
-    .bar-fill { height: 100%; background: #FF683C; border-radius: 2px; }
-    .bar-count { text-align: right; font-size: 14px; font-variant-numeric: tabular-nums; }
+    .bar-fill { height: 100%; background: #FF683C; border-radius: 0 4px 4px 0; }
+    .bar-count { text-align: right; font-size: 14px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .bar-count .pct { color: #57514B; margin-left: 6px; }
 
     .responses { margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(27,23,20,.16); }
     .responses[hidden] { display: none; }
@@ -231,6 +232,153 @@
     .photo-no { color: #8A847D; }
     .empty { font-size: 15px; color: #57514B; padding: 8px 0; }
     .table-note { margin-top: 14px; font-size: 13px; line-height: 1.5; color: #57514B; }
+
+    /* Small lists (cities, bottles) */
+    .sub { margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(27,23,20,.16); }
+    .sub .label { color: #57514B; margin-bottom: 8px; }
+    .muted-note { font-size: 13px; line-height: 1.5; color: #57514B; margin-top: 14px; }
+    .card-empty { font-size: 15px; line-height: 1.5; color: #57514B; }
+
+    /* Texting by hour */
+    .hours { position: relative; }
+    .hours-plot {
+      display: grid;
+      grid-template-columns: repeat(24, minmax(0, 1fr));
+      align-items: end;
+      gap: 2px;
+      height: 120px;
+      border-bottom: 1px solid #1B1714;
+    }
+    .hour-col {
+      height: 100%;
+      display: flex;
+      align-items: flex-end;
+      cursor: default;
+      border: 0;
+      background: none;
+      padding: 0;
+    }
+    .hour-col span {
+      display: block;
+      width: 100%;
+      background: #FF683C;
+      border-radius: 4px 4px 0 0;
+      min-height: 0;
+    }
+    .hour-col:hover span, .hour-col:focus-visible span { background: #C43A17; }
+    .hour-col:focus-visible { outline: 2px solid #1B1714; outline-offset: 1px; }
+    .hours-axis {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      margin-top: 6px;
+      font-size: 12px;
+      color: #57514B;
+    }
+    .hours-peak { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+    .tip {
+      position: absolute;
+      top: -6px;
+      transform: translate(-50%, -100%);
+      background: #1B1714;
+      color: #FFF;
+      font-size: 13px;
+      padding: 5px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    .tip[hidden] { display: none; }
+
+    /* Person button in the table */
+    .who-btn {
+      border: 0;
+      background: none;
+      padding: 0;
+      color: #1B1714;
+      font-weight: 600;
+      text-align: left;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      text-decoration-thickness: 1px;
+      cursor: pointer;
+    }
+    .who-btn:hover { text-decoration-thickness: 2px; }
+    .who-btn.none { font-weight: 400; font-style: italic; color: #57514B; }
+    tbody tr.clickable { cursor: pointer; }
+    tbody tr.clickable:hover td { background: #FBF7F4; }
+
+    /* Conversation panel */
+    .panel-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(27,23,20,.45);
+      z-index: 20;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .panel-backdrop[hidden] { display: none; }
+    .panel {
+      width: min(520px, 100%);
+      height: 100%;
+      background: #FFF;
+      display: flex;
+      flex-direction: column;
+      box-shadow: -20px 0 48px -24px rgba(27,23,20,.5);
+    }
+    .panel-head {
+      padding: 20px clamp(16px, 4vw, 28px) 16px;
+      border-bottom: 1px solid rgba(27,23,20,.12);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .panel-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+    .panel-title { font-family: 'Gloock', Georgia, serif; font-size: 30px; line-height: 1; }
+    .panel-close {
+      flex-shrink: 0;
+      border: 1.5px solid #1B1714;
+      background: #FFF;
+      border-radius: 4px;
+      height: 36px;
+      padding: 0 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; font-size: 14px; line-height: 1.45; }
+    .facts dt { font-family: 'Spline Sans Mono', ui-monospace, Menlo, monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #57514B; padding-top: 3px; }
+    .facts dd { color: #3F3A35; overflow-wrap: anywhere; white-space: pre-line; }
+    .panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px clamp(16px, 4vw, 28px) 32px;
+      background: #FFF;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .day-sep {
+      align-self: center;
+      font-family: 'Spline Sans Mono', ui-monospace, Menlo, monospace;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #57514B;
+      margin: 12px 0 4px;
+    }
+    .bubble {
+      max-width: 82%;
+      padding: 10px 14px;
+      font-size: 15px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    .bubble.user { align-self: flex-end; border-radius: 14px 14px 4px 14px; background: #F7A140; color: #1B1714; }
+    .bubble.collin { align-self: flex-start; border-radius: 14px 14px 14px 4px; background: #EEEFEB; color: #1B1714; }
+    .bubble-time { display: block; margin-top: 4px; font-size: 11px; color: rgba(27,23,20,.6); }
+    .bubble.user .bubble-time { text-align: right; }
+    .panel-note { align-self: center; font-size: 13px; color: #57514B; text-align: center; }
 
     /* ── Footer ── */
     .foot {
@@ -300,23 +448,81 @@
             <tbody id="activeBody"></tbody>
           </table>
         </div>
-        <p class="table-note">Counts only texts people sent, not Collin's replies. Phone numbers show the last 4 digits.</p>
+        <p class="table-note">Tap a name to read their texts with Collin. Counts only texts people sent, not Collin's replies. Phone numbers show the last 4 digits.</p>
       </section>
 
       <div class="grid">
+        <section class="card">
+          <div class="card-head">
+            <h2>Onboarding</h2>
+            <p>How far people get. Each step counts people who answered it.</p>
+          </div>
+          <div id="funnelChart"></div>
+        </section>
+
         <section class="card">
           <div class="card-head"><h2>Bar type</h2></div>
           <div id="barTypeChart"></div>
           <div class="responses" id="dResponses" hidden></div>
         </section>
+      </div>
+
+      <div class="grid">
+        <section class="card">
+          <div class="card-head">
+            <h2>Most-made drinks</h2>
+            <p id="drinksSub">Drinks Collin has given a recipe for.</p>
+          </div>
+          <div id="drinksChart"></div>
+        </section>
 
         <section class="card">
-          <div class="card-head"><h2>Onboarding</h2></div>
-          <div id="onboardingChart"></div>
+          <div class="card-head">
+            <h2>Where people are</h2>
+            <p>From the city people give at the end of onboarding, so only people who finished.</p>
+          </div>
+          <div id="zoneChart"></div>
+          <div class="sub" id="cityList" hidden></div>
+        </section>
+      </div>
+
+      <div class="grid">
+        <section class="card">
+          <div class="card-head">
+            <h2>Home bars</h2>
+            <p id="barsSub">From bar photos. Each bar counts once per spirit.</p>
+          </div>
+          <div id="spiritChart"></div>
+          <div class="sub" id="bottleList" hidden></div>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <h2>When people text</h2>
+            <p>Texts people sent in the last 90 days, in their own local time.</p>
+          </div>
+          <div id="hoursChart"></div>
+          <div class="sub">
+            <p class="label">By day</p>
+            <div id="daysChart"></div>
+          </div>
         </section>
       </div>
     </div>
   </main>
+
+  <div class="panel-backdrop" id="panelBackdrop" hidden>
+    <div class="panel" role="dialog" aria-modal="true" aria-labelledby="panelTitle">
+      <div class="panel-head">
+        <div class="panel-top">
+          <h2 class="panel-title" id="panelTitle">Conversation</h2>
+          <button type="button" class="panel-close" id="panelClose">Close</button>
+        </div>
+        <dl class="facts" id="panelFacts"></dl>
+      </div>
+      <div class="panel-body" id="panelBody"></div>
+    </div>
+  </div>
 
   <footer class="foot">
     <div class="foot-in">Data pulled live from Collin's database.</div>
@@ -349,9 +555,9 @@
       return node;
     }
 
-    function renderBars(container, rows) {
+    function renderBars(container, rows, opts = {}) {
       container.innerHTML = '';
-      const max = Math.max(...rows.map(r => r.count), 1);
+      const max = opts.max || Math.max(...rows.map(r => r.count), 1);
 
       rows.forEach(row => {
         const rowEl = el('div', 'bar-row');
@@ -361,7 +567,12 @@
         fill.style.width = Math.round((row.count / max) * 100) + '%';
         track.appendChild(fill);
         rowEl.appendChild(track);
-        rowEl.appendChild(el('div', 'bar-count mono', row.count));
+        const countEl = el('div', 'bar-count mono', row.count);
+        if (opts.percentOf) {
+          countEl.appendChild(el('span', 'pct', Math.round((row.count / opts.percentOf) * 100) + '%'));
+        }
+        countEl.title = row.title || '';
+        rowEl.appendChild(countEl);
         container.appendChild(rowEl);
       });
     }
@@ -409,7 +620,10 @@
 
         const who = el('div', 'who');
         const name = u.name && u.name.trim();
-        who.appendChild(el('span', name ? 'who-name' : 'who-name none', name || 'No name yet'));
+        const nameBtn = el('button', name ? 'who-btn' : 'who-btn none', name || 'No name yet');
+        nameBtn.type = 'button';
+        nameBtn.setAttribute('aria-label', 'Read texts with ' + (name || 'this person') + ', number ending ' + (u.phone_last4 || ''));
+        who.appendChild(nameBtn);
         who.appendChild(el('span', 'who-phone mono', '•••' + (u.phone_last4 || '')));
         if (u.opted_out) who.appendChild(el('span', 'tag out', 'Opted out'));
         else if (!u.onboarding_done) who.appendChild(el('span', 'tag', 'Onboarding'));
@@ -422,8 +636,78 @@
         tr.appendChild(el('td', 'when', timeAgo(u.last_active_seconds)));
         tr.appendChild(el('td', 'num', u.drinks));
         tr.appendChild(el('td', u.sent_bar_photo ? 'photo-yes' : 'photo-no', u.sent_bar_photo ? 'Yes' : 'No'));
+        if (u.ref) {
+          tr.className = 'clickable';
+          tr.addEventListener('click', () => openConversation(u.ref, nameBtn));
+        }
         tbody.appendChild(tr);
       });
+    }
+
+    function renderList(container, label, items) {
+      container.innerHTML = '';
+      if (!items || items.length === 0) {
+        container.hidden = true;
+        return;
+      }
+      container.hidden = false;
+      container.appendChild(el('p', 'label', label));
+      items.forEach(item => {
+        const row = el('div', 'response-row');
+        row.appendChild(el('span', '', item.text));
+        row.appendChild(el('span', 'response-count mono', item.count));
+        container.appendChild(row);
+      });
+    }
+
+    function renderEmpty(container, text) {
+      container.innerHTML = '';
+      container.appendChild(el('p', 'card-empty', text));
+    }
+
+    const HOUR_NAMES = Array.from({ length: 24 }, (_, h) =>
+      (h % 12 === 0 ? 12 : h % 12) + (h < 12 ? ' AM' : ' PM'));
+
+    function renderHours(container, byHour) {
+      container.innerHTML = '';
+      const total = byHour.reduce((a, b) => a + b, 0);
+      if (total === 0) {
+        renderEmpty(container, 'No texts in the last 90 days yet.');
+        return;
+      }
+      const max = Math.max(...byHour);
+      const peak = byHour.indexOf(max);
+      container.appendChild(el('p', 'hours-peak', 'Busiest hour: ' + HOUR_NAMES[peak] + ' to ' + HOUR_NAMES[(peak + 1) % 24]));
+
+      const wrap = el('div', 'hours');
+      const tip = el('div', 'tip');
+      tip.hidden = true;
+      const plot = el('div', 'hours-plot');
+      byHour.forEach((count, h) => {
+        const col = el('button', 'hour-col');
+        col.type = 'button';
+        const text = HOUR_NAMES[h] + ': ' + count + (count === 1 ? ' text' : ' texts');
+        col.setAttribute('aria-label', text);
+        const bar = el('span');
+        bar.style.height = (count / max * 100) + '%';
+        col.appendChild(bar);
+        const show = () => {
+          tip.textContent = text;
+          tip.hidden = false;
+          tip.style.left = ((h + 0.5) / 24 * 100) + '%';
+        };
+        col.addEventListener('mouseenter', show);
+        col.addEventListener('focus', show);
+        col.addEventListener('mouseleave', () => { tip.hidden = true; });
+        col.addEventListener('blur', () => { tip.hidden = true; });
+        plot.appendChild(col);
+      });
+      wrap.appendChild(plot);
+      wrap.appendChild(tip);
+      container.appendChild(wrap);
+      const axis = el('div', 'hours-axis mono');
+      ['12 AM', '6 AM', '12 PM', '6 PM'].forEach(t => axis.appendChild(el('span', '', t)));
+      container.appendChild(axis);
     }
 
     function renderDashboard(data) {
@@ -435,16 +719,147 @@
       );
       renderDResponses(document.getElementById('dResponses'), data.dResponses);
 
+      // Onboarding funnel, measured against everyone who signed up
+      const funnel = data.funnel || [];
+      const signedUp = funnel.length ? funnel[0].count : 0;
       renderBars(
-        document.getElementById('onboardingChart'),
-        data.onboarding.map(r => ({
-          label: r.onboarding_done ? 'Completed' : 'In progress',
-          count: parseInt(r.count, 10)
-        }))
+        document.getElementById('funnelChart'),
+        funnel.map(r => ({ label: r.step, count: r.count })),
+        { max: Math.max(signedUp, 1), percentOf: Math.max(signedUp, 1) }
       );
+
+      // Most-made drinks
+      const drinks = (data.topDrinks && data.topDrinks.drinks) || [];
+      const drinksEl = document.getElementById('drinksChart');
+      if (drinks.length) {
+        document.getElementById('drinksSub').textContent =
+          'Top ' + drinks.length + ' of ' + data.topDrinks.total + ' recipes Collin has given.';
+        renderBars(drinksEl, drinks.map(d => ({ label: d.drink, count: d.count })));
+      } else {
+        renderEmpty(drinksEl, 'No recipes given yet.');
+      }
+
+      // Where people are
+      const places = data.places || { timezones: [], cities: [] };
+      const zoneEl = document.getElementById('zoneChart');
+      if (places.timezones.length) {
+        renderBars(zoneEl, places.timezones.map(z => ({ label: z.zone, count: z.count })));
+      } else {
+        renderEmpty(zoneEl, 'No one has finished onboarding yet.');
+      }
+      renderList(document.getElementById('cityList'), 'Top cities',
+        places.cities.map(c => ({ text: c.city, count: c.count })));
+
+      // Home bars
+      const bars = data.homeBars || { bars: 0, categories: [], bottles: [] };
+      const spiritEl = document.getElementById('spiritChart');
+      if (bars.bars > 0 && bars.categories.length) {
+        document.getElementById('barsSub').textContent =
+          'From ' + bars.bars + (bars.bars === 1 ? ' bar photo' : ' bar photos') + '. Each bar counts once per spirit.';
+        renderBars(spiritEl, bars.categories.map(c => ({ label: c.category, count: c.count })),
+          { max: bars.bars, percentOf: bars.bars });
+      } else {
+        renderEmpty(spiritEl, 'No bar photos yet. This fills in as people text Collin pictures of their bars.');
+      }
+      renderList(document.getElementById('bottleList'), 'Top bottles',
+        bars.bottles.map(b => ({ text: b.name, count: b.count })));
+
+      // When people text
+      const times = data.textingTimes || { byHour: Array(24).fill(0), byDay: Array(7).fill(0) };
+      renderHours(document.getElementById('hoursChart'), times.byHour);
+      const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      const mondayFirst = [1, 2, 3, 4, 5, 6, 0];
+      renderBars(document.getElementById('daysChart'),
+        mondayFirst.map((d, i) => ({ label: dayNames[i], count: times.byDay[d] })));
 
       renderActiveUsers(document.getElementById('activeBody'), data.activeUsers);
     }
+
+    // ── Conversation panel ──
+    const panelBackdrop = document.getElementById('panelBackdrop');
+    const panelTitle = document.getElementById('panelTitle');
+    const panelFacts = document.getElementById('panelFacts');
+    const panelBody = document.getElementById('panelBody');
+    const panelClose = document.getElementById('panelClose');
+    let currentToken = null;
+    let lastOpener = null;
+
+    function formatDay(ms) {
+      return new Date(ms).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    }
+    function formatTime(ms) {
+      return new Date(ms).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    }
+
+    function addFact(term, value) {
+      if (value === null || value === undefined || String(value).trim() === '') return;
+      panelFacts.appendChild(el('dt', '', term));
+      panelFacts.appendChild(el('dd', '', value));
+    }
+
+    function closeConversation() {
+      panelBackdrop.hidden = true;
+      document.body.style.overflow = '';
+      if (lastOpener) lastOpener.focus();
+    }
+
+    async function openConversation(ref, opener) {
+      lastOpener = opener || null;
+      panelTitle.textContent = 'Loading...';
+      panelFacts.innerHTML = '';
+      panelBody.innerHTML = '';
+      panelBackdrop.hidden = false;
+      document.body.style.overflow = 'hidden';
+      panelClose.focus();
+
+      try {
+        const res = await fetch('/admin/api/conversation?ref=' + encodeURIComponent(ref), {
+          headers: { 'x-admin-token': currentToken || '' }
+        });
+        if (!res.ok) throw new Error('failed');
+        const data = await res.json();
+        const p = data.profile;
+
+        panelTitle.textContent = (p.name && p.name.trim()) || 'No name yet';
+        addFact('Number', '•••' + p.phone_last4);
+        addFact('Status', p.opted_out ? 'Opted out' : (p.onboarding_done ? 'Onboarded' : 'Still onboarding'));
+        addFact('Signed up', p.signed_up_ms ? formatDay(p.signed_up_ms) : '');
+        addFact('City', p.city);
+        addFact('Bar type', p.bar_type);
+        addFact('Favorite', p.favorite_drink);
+        addFact('Bar', p.bar_inventory);
+
+        if (data.truncated) {
+          panelBody.appendChild(el('p', 'panel-note', 'Showing the latest ' + data.messages.length + ' texts.'));
+        }
+        if (data.messages.length === 0) {
+          panelBody.appendChild(el('p', 'panel-note', 'No texts yet.'));
+        }
+        let lastDay = '';
+        data.messages.forEach(m => {
+          const day = formatDay(m.at_ms);
+          if (day !== lastDay) {
+            panelBody.appendChild(el('p', 'day-sep', day));
+            lastDay = day;
+          }
+          const bubble = el('div', 'bubble ' + (m.role === 'user' ? 'user' : 'collin'), m.content);
+          bubble.appendChild(el('span', 'bubble-time', (m.role === 'user' ? '' : 'Collin · ') + formatTime(m.at_ms)));
+          panelBody.appendChild(bubble);
+        });
+        panelBody.scrollTop = panelBody.scrollHeight;
+      } catch (err) {
+        panelTitle.textContent = 'Conversation';
+        panelBody.appendChild(el('p', 'panel-note', "Couldn't load this conversation. Try again in a minute."));
+      }
+    }
+
+    panelClose.addEventListener('click', closeConversation);
+    panelBackdrop.addEventListener('click', e => {
+      if (e.target === panelBackdrop) closeConversation();
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !panelBackdrop.hidden) closeConversation();
+    });
 
     function showDashboard() {
       gate.style.display = 'none';
@@ -463,6 +878,7 @@
 
       try {
         const data = await fetchStats(token);
+        currentToken = token;
         try { sessionStorage.setItem('collinAdminToken', token); } catch (e) {}
         tokenInput.value = '';
         showDashboard();
