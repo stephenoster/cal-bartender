@@ -1654,6 +1654,30 @@ app.get('/admin/api/emails.csv', async (req, res) => {
   }
 });
 
+// A short stand-in for a phone number, so the admin page can ask for one
+// person's conversation without full numbers ever reaching the browser.
+// Keyed on ADMIN_TOKEN, so it can't be worked out from a number alone.
+function conversationRef(phone) {
+  return crypto.createHmac('sha256', process.env.ADMIN_TOKEN || '')
+    .update(phone).digest('hex').slice(0, 20);
+}
+
+// Friendly names for the US zones resolveTimezone() hands out. Anything
+// else shows as its raw zone name.
+const ZONE_LABELS = {
+  'America/New_York': 'Eastern',
+  'America/Detroit': 'Eastern',
+  'America/Indiana/Indianapolis': 'Eastern',
+  'America/Kentucky/Louisville': 'Eastern',
+  'America/Chicago': 'Central',
+  'America/Denver': 'Mountain',
+  'America/Boise': 'Mountain',
+  'America/Phoenix': 'Arizona',
+  'America/Los_Angeles': 'Pacific',
+  'America/Anchorage': 'Alaska',
+  'Pacific/Honolulu': 'Hawaii',
+};
+
 app.get('/admin/api/stats', async (req, res) => {
   const token = req.headers['x-admin-token'] || req.query.token;
 
@@ -1712,6 +1736,7 @@ app.get('/admin/api/stats', async (req, res) => {
     // a phone number ever leave the database here.
     const activeResult = await pool.query(`
       SELECT
+        u.phone_number,
         right(u.phone_number, 4) AS phone_last4,
         u.name,
         u.onboarding_done,
@@ -1740,15 +1765,218 @@ app.get('/admin/api/stats', async (req, res) => {
       LIMIT 20
     `);
 
+    // The full number stays here. The page gets a ref to ask for the
+    // conversation instead.
+    const activeUsers = activeResult.rows.map(({ phone_number, ...row }) => ({
+      ...row,
+      ref: conversationRef(phone_number),
+    }));
+
+    // How far people get through onboarding. Each step is counted from the
+    // answer actually saved, since an onboarding that times out clears
+    // onboarding_step without finishing.
+    const funnelResult = await pool.query(`
+      SELECT
+        COUNT(*)::int AS signed_up,
+        (COUNT(*) FILTER (WHERE EXISTS (
+          SELECT 1 FROM conversations c
+          WHERE c.phone_number = u.phone_number AND c.role = 'user'
+        )))::int AS texted_back,
+        (COUNT(*) FILTER (WHERE u.name IS NOT NULL AND trim(u.name) <> ''))::int AS gave_name,
+        (COUNT(*) FILTER (WHERE u.bar_type IS NOT NULL AND trim(u.bar_type) <> ''))::int AS gave_bar_type,
+        (COUNT(*) FILTER (WHERE u.favorite_drink IS NOT NULL AND trim(u.favorite_drink) <> ''))::int AS gave_favorite_drink,
+        (COUNT(*) FILTER (WHERE u.onboarding_done))::int AS finished
+      FROM users u
+    `);
+    const f = funnelResult.rows[0];
+    const funnel = [
+      { step: 'Signed up', count: f.signed_up },
+      { step: 'Texted back', count: f.texted_back },
+      { step: 'Gave a name', count: f.gave_name },
+      { step: 'Answered bar type', count: f.gave_bar_type },
+      { step: 'Gave a favorite drink', count: f.gave_favorite_drink },
+      { step: 'Gave a city (done)', count: f.finished },
+    ];
+
+    // Drinks Collin has given a recipe for, grouped regardless of case.
+    const drinksResult = await pool.query(`
+      SELECT mode() WITHIN GROUP (ORDER BY trim(drink_name)) AS drink,
+             COUNT(*)::int AS count
+      FROM recipes
+      WHERE drink_name IS NOT NULL AND trim(drink_name) <> ''
+      GROUP BY lower(trim(drink_name))
+      ORDER BY count DESC, drink
+      LIMIT 10
+    `);
+    const recipesTotalResult = await pool.query(`SELECT COUNT(*)::int AS count FROM recipes`);
+
+    // City is the last onboarding answer, so these only cover people who
+    // finished.
+    const zoneResult = await pool.query(`
+      SELECT timezone, COUNT(*)::int AS count
+      FROM users
+      WHERE onboarding_done
+      GROUP BY timezone
+    `);
+    const zoneCounts = new Map();
+    for (const row of zoneResult.rows) {
+      const label = row.timezone ? (ZONE_LABELS[row.timezone] || row.timezone) : "Couldn't tell";
+      zoneCounts.set(label, (zoneCounts.get(label) || 0) + row.count);
+    }
+    const timezones = [...zoneCounts.entries()]
+      .map(([zone, count]) => ({ zone, count }))
+      .sort((a, b) => b.count - a.count || a.zone.localeCompare(b.zone));
+
+    const citiesResult = await pool.query(`
+      SELECT mode() WITHIN GROUP (ORDER BY trim(city)) AS city,
+             COUNT(*)::int AS count
+      FROM users
+      WHERE city IS NOT NULL AND trim(city) <> ''
+      GROUP BY lower(trim(city))
+      ORDER BY count DESC, city
+      LIMIT 10
+    `);
+
+    // What's in people's bars, from bar photos. Each bar counts once per
+    // spirit type or bottle. Mixers, garnishes, tools and unread labels
+    // are left out.
+    const NON_SPIRITS = ['bitters', 'syrup', 'syrups', 'citrus', 'fruit', 'garnish', 'garnishes',
+      'tool', 'tools', 'mixer', 'mixers', 'soda', 'juice', 'glassware', 'herb', 'herbs', 'other'];
+    const barItems = `
+      WITH items AS (
+        SELECT u.phone_number,
+               trim(b->>'category') AS category,
+               trim(b->>'name') AS name
+        FROM users u,
+             jsonb_array_elements(
+               CASE WHEN jsonb_typeof(u.bar_bottles) = 'array' THEN u.bar_bottles ELSE '[]'::jsonb END
+             ) b
+      ),
+      spirits AS (
+        SELECT * FROM items
+        WHERE category IS NOT NULL AND lower(category) <> ALL($1::text[])
+      )`;
+    const barsResult = await pool.query(`${barItems}
+      SELECT COUNT(DISTINCT phone_number)::int AS count FROM items`, [NON_SPIRITS]);
+    const categoriesResult = await pool.query(`${barItems}
+      SELECT mode() WITHIN GROUP (ORDER BY category) AS category,
+             COUNT(DISTINCT phone_number)::int AS count
+      FROM spirits
+      GROUP BY lower(category)
+      ORDER BY count DESC, category
+      LIMIT 8`, [NON_SPIRITS]);
+    const bottlesResult = await pool.query(`${barItems}
+      SELECT mode() WITHIN GROUP (ORDER BY name) AS name,
+             mode() WITHIN GROUP (ORDER BY category) AS category,
+             COUNT(DISTINCT phone_number)::int AS count
+      FROM spirits
+      WHERE name IS NOT NULL AND name <> ''
+        AND name !~* '(maybe|unreadable|can''t read|cannot read|unknown|unlabeled)'
+      GROUP BY lower(name)
+      ORDER BY count DESC, name
+      LIMIT 10`, [NON_SPIRITS]);
+
+    // When people text Collin, in their own local time, over the last 90
+    // days. created_at is stored in the database's own time zone; people
+    // without a known time zone count as Eastern, like Collin assumes.
+    const timesResult = await pool.query(`
+      WITH zones AS (
+        SELECT u.phone_number, COALESCE(n.name, 'America/New_York') AS zone
+        FROM users u
+        LEFT JOIN pg_timezone_names n ON n.name = u.timezone
+      ),
+      local AS (
+        SELECT (c.created_at AT TIME ZONE current_setting('TimeZone')) AT TIME ZONE z.zone AS ts
+        FROM conversations c
+        JOIN zones z ON z.phone_number = c.phone_number
+        WHERE c.role = 'user' AND c.created_at > now() - interval '90 days'
+      )
+      SELECT EXTRACT(DOW FROM ts)::int AS dow,
+             EXTRACT(HOUR FROM ts)::int AS hour,
+             COUNT(*)::int AS count
+      FROM local
+      GROUP BY 1, 2
+    `);
+    const byHour = Array(24).fill(0);
+    const byDay = Array(7).fill(0); // 0 = Sunday
+    for (const row of timesResult.rows) {
+      byHour[row.hour] += row.count;
+      byDay[row.dow] += row.count;
+    }
+
     res.json({
       total,
       barTypes,
       dResponses,
       onboarding: onboardingResult.rows,
-      activeUsers: activeResult.rows,
+      activeUsers,
+      funnel,
+      topDrinks: { total: recipesTotalResult.rows[0].count, drinks: drinksResult.rows },
+      places: { timezones, cities: citiesResult.rows },
+      homeBars: {
+        bars: barsResult.rows[0].count,
+        categories: categoriesResult.rows,
+        bottles: bottlesResult.rows,
+      },
+      textingTimes: { byHour, byDay },
     });
   } catch (err) {
     console.error('Error fetching admin stats:', err.message);
+    res.status(500).json({ error: 'query failed' });
+  }
+});
+
+// One person's conversation with Collin, for the admin page. Asked for by
+// ref (see conversationRef), never by phone number. Returns the latest 200
+// texts, oldest first, plus what Collin knows about them.
+app.get('/admin/api/conversation', async (req, res) => {
+  const token = req.headers['x-admin-token'] || req.query.token;
+
+  if (!process.env.ADMIN_TOKEN || token !== process.env.ADMIN_TOKEN) {
+    return res.status(401).json({ error: 'unauthorized' });
+  }
+
+  const ref = String(req.query.ref || '');
+  if (!/^[0-9a-f]{20}$/.test(ref)) {
+    return res.status(400).json({ error: 'bad ref' });
+  }
+
+  try {
+    const { rows: phones } = await pool.query('SELECT phone_number FROM users');
+    const phone = phones.map(r => r.phone_number).find(p => conversationRef(p) === ref);
+    if (!phone) return res.status(404).json({ error: 'not found' });
+
+    const { rows: [profile] } = await pool.query(`
+      SELECT right(phone_number, 4) AS phone_last4, name, bar_type, favorite_drink,
+             city, onboarding_done, COALESCE(opted_out, false) AS opted_out, bar_inventory,
+             EXTRACT(EPOCH FROM (created_at AT TIME ZONE current_setting('TimeZone'))) * 1000 AS signed_up_ms
+      FROM users WHERE phone_number = $1
+    `, [phone]);
+
+    const LIMIT = 200;
+    const { rows: latest } = await pool.query(`
+      SELECT role, content,
+             EXTRACT(EPOCH FROM (created_at AT TIME ZONE current_setting('TimeZone'))) * 1000 AS at_ms
+      FROM conversations
+      WHERE phone_number = $1
+      ORDER BY created_at DESC, id DESC
+      LIMIT $2
+    `, [phone, LIMIT + 1]);
+
+    const truncated = latest.length > LIMIT;
+    const messages = latest.slice(0, LIMIT).reverse().map(m => ({
+      role: m.role === 'user' ? 'user' : 'collin',
+      content: m.content || '',
+      at_ms: Number(m.at_ms),
+    }));
+
+    res.json({
+      profile: { ...profile, signed_up_ms: Number(profile.signed_up_ms) },
+      messages,
+      truncated,
+    });
+  } catch (err) {
+    console.error('Error fetching admin conversation:', err.message);
     res.status(500).json({ error: 'query failed' });
   }
 });
