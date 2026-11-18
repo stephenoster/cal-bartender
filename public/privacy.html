@@ -3,218 +3,186 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Privacy Policy — Collin Thomas</title>
+  <title>Privacy Policy · Collin Thomas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gloock&family=Schibsted+Grotesk:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
+    /* Matches the landing page: orange band, zinc page, ink type. */
     * { margin: 0; padding: 0; box-sizing: border-box; }
-
+    html, body { background: #EEEFEB; color: #1B1714; }
     body {
-      background: #F5F3EE;
-      color: #1A1916;
-      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-      font-weight: 400;
+      font-family: 'Schibsted Grotesk', Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
       min-height: 100vh;
-    }
-
-    header {
-      border-bottom: 1px solid #C8C4BC;
-      padding: 24px 40px;
       display: flex;
+      flex-direction: column;
+    }
+    a { color: inherit; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+    a:hover { text-decoration-thickness: 2px; }
+    a:focus-visible { outline: 3px solid #1B1714; outline-offset: 2px; }
+
+    .band {
+      background: #FF683C;
+      padding-left: max(16px, 5vw);
+      padding-right: max(16px, 5vw);
+      padding-bottom: clamp(36px, 6vw, 72px);
+    }
+    .top {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 20px 0;
+      display: flex;
+      flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
+      gap: 12px 24px;
     }
-
-    .wordmark {
-      font-size: 13px;
-      font-weight: 400;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: #1A1916;
-      text-decoration: none;
+    .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+    .brand img { display: block; width: auto; }
+    .back { font-size: 15px; font-weight: 600; }
+    .title {
+      max-width: 720px;
+      margin: clamp(24px, 5vw, 56px) auto 0;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
     }
-
-    .back-link {
-      font-size: 11px;
-      color: #999690;
-      text-decoration: none;
+    .label {
+      font-family: 'Spline Sans Mono', ui-monospace, Menlo, monospace;
+      font-size: 12px;
       letter-spacing: 0.1em;
       text-transform: uppercase;
-      transition: color 0.2s;
     }
-
-    .back-link:hover { color: #1A1916; }
+    h1 {
+      font-family: 'Gloock', Georgia, serif;
+      font-weight: 400;
+      font-size: clamp(44px, 7vw, 80px);
+      line-height: 0.95;
+      letter-spacing: -0.015em;
+    }
+    .updated { font-size: 15px; font-weight: 500; }
 
     main {
-      max-width: 620px;
-      margin: 0 auto;
-      padding: 64px 40px 100px;
-    }
-
-    .doc-label {
-      font-size: 10px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      color: #999690;
-      margin-bottom: 12px;
-    }
-
-    h1 {
-      font-size: 28px;
-      font-weight: 300;
-      color: #1A1916;
-      letter-spacing: -0.02em;
-      line-height: 1.1;
-      margin-bottom: 8px;
-    }
-
-    .last-updated {
-      font-size: 11px;
-      color: #999690;
-      margin-bottom: 40px;
-      letter-spacing: 0.04em;
-    }
-
-    .rule {
+      flex: 1;
       width: 100%;
-      height: 1px;
-      background: #C8C4BC;
-      margin-bottom: 40px;
+      max-width: calc(720px + 2 * max(16px, 5vw));
+      margin: 0 auto;
+      padding: clamp(40px, 6vw, 72px) max(16px, 5vw) clamp(56px, 8vw, 96px);
+      display: flex;
+      flex-direction: column;
+      gap: 36px;
     }
-
-    section {
-      margin-bottom: 40px;
-    }
-
-    h2 {
-      font-size: 11px;
-      font-weight: 400;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: #999690;
-      margin-bottom: 12px;
-    }
-
-    p {
-      font-size: 13px;
-      line-height: 1.8;
-      color: #6B6860;
-      margin-bottom: 12px;
-    }
-
-    ul {
-      list-style: none;
-      padding: 0;
-      margin-bottom: 12px;
-    }
-
-    ul li {
-      font-size: 13px;
-      line-height: 1.8;
-      color: #6B6860;
-      padding-left: 16px;
-      position: relative;
-      margin-bottom: 4px;
-    }
-
-    ul li::before {
-      content: '—';
+    h2 { font-size: 20px; font-weight: 600; line-height: 1.3; margin-bottom: 10px; }
+    p, li { font-size: 17px; line-height: 1.65; color: #3F3A35; }
+    p + p, p + ul, ul + p { margin-top: 12px; }
+    ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+    li { position: relative; padding-left: 20px; }
+    li::before {
+      content: "";
       position: absolute;
-      left: 0;
-      color: #C8C4BC;
+      left: 2px;
+      top: 0.68em;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #C43A17;
     }
+    strong { color: #1B1714; font-weight: 600; }
 
-    strong {
-      color: #1A1916;
-      font-weight: 500;
+    .foot {
+      background: #1B1714;
+      color: #BDB8B1;
+      padding: 24px max(16px, 5vw);
+      font-size: 13px;
+      line-height: 1.5;
     }
-
-    footer {
-      border-top: 1px solid #C8C4BC;
-      padding: 24px 40px;
-      text-align: center;
+    .foot-in {
+      max-width: 1240px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 12px 32px;
     }
-
-    footer p {
-      font-size: 10px;
-      color: #C8C4BC;
-      letter-spacing: 0.06em;
-      margin: 0;
-    }
-
-    footer a {
-      color: #C8C4BC;
-      text-decoration: none;
-    }
-
-    footer a:hover { color: #999690; }
-
-    @media (max-width: 600px) {
-      header { padding: 20px 24px; }
-      main { padding: 48px 24px 80px; }
-      h1 { font-size: 22px; }
-      footer { padding: 24px; }
-    }
+    .foot-links { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+    .foot a { color: #EEEFEB; }
   </style>
 </head>
 <body>
 
-  <header>
-    <a href="/" class="wordmark">Collin Thomas</a>
-    <a href="/" class="back-link">← Back</a>
-  </header>
+  <div class="band">
+    <header class="top">
+      <a href="/" class="brand" aria-label="Collin Thomas home">
+        <img src="/logo-mark.svg" alt="" height="32">
+        <img src="/logo-wordmark.svg" alt="Collin Thomas" height="20">
+      </a>
+      <a href="/" class="back">Back to Collin</a>
+    </header>
+    <div class="title">
+      <p class="label">Legal</p>
+      <h1>Privacy Policy</h1>
+      <p class="updated">Last updated: November 18, 2026</p>
+    </div>
+  </div>
 
   <main>
-    <div class="doc-label">Legal</div>
-    <h1>Privacy Policy</h1>
-    <p class="last-updated">Last updated: May 25, 2026</p>
-    <div class="rule"></div>
 
     <section>
-      <p>Collin Thomas ("the Service") is operated as a personal project. This policy explains how we handle information when you use our SMS-based cocktail recommendation service.</p>
+      <p>Collin Thomas ("the Service") is operated as a personal project. This policy explains how we handle information when you use our cocktail recommendation service, by text message or in your browser.</p>
     </section>
 
     <section>
       <h2>What we collect</h2>
       <ul>
         <li>Your phone number</li>
-        <li>The content of messages you send to the Service, including any photos of your bar or ingredients</li>
+        <li>Your date of birth, to confirm you're 21 or older</li>
+        <li>Your email address, if you choose to give it</li>
+        <li>The content of messages you send to the Service</li>
         <li>Conversation history, which may be stored to personalize future sessions and remember your preferences</li>
       </ul>
     </section>
 
     <section>
       <h2>How we use it</h2>
-      <p>Your phone number is used solely to send you replies. Your message content — including text and any photos you send — is used to generate personalized cocktail recommendations. Conversation history may be stored persistently to provide continuity across sessions, remember your preferences, and improve recommendations over time.</p>
+      <p>Your phone number is used to text with you as Collin. Your date of birth is used only to confirm you're 21 or older. Your email address, if you give it, is used only to send occasional news about Collin and seasonal recipes. Email is separate from text messages, and you can unsubscribe from email at any time.</p>
+      <p>Your message content is used to generate personalized cocktail recommendations. Conversation history may be stored persistently to provide continuity across sessions, remember your preferences, and improve recommendations over time.</p>
     </section>
 
     <section>
       <h2>Sub-processors</h2>
       <p>We use the following third-party services to operate:</p>
       <ul>
-        <li><strong>Anthropic</strong> — AI processing of your messages and photos to generate recommendations</li>
-        <li><strong>Twilio</strong> — SMS delivery and phone number management</li>
+        <li><strong>Anthropic:</strong> AI processing of your messages to generate recommendations</li>
+        <li><strong>Telnyx:</strong> SMS delivery and phone number management</li>
+        <li><strong>Railway:</strong> hosting and database storage for the Service</li>
+        <li><strong>Email delivery provider:</strong> sending email updates to people who give us an email address</li>
       </ul>
-      <p>We do not sell, share, or distribute your information to any other third party. No mobile opt-in data or phone numbers will be shared with third parties or affiliates for marketing or promotional purposes.</p>
-    </section>
-
-    <section>
-      <h2>Photos</h2>
-      <p>If you send a photo of your bar or ingredients, it is processed by Anthropic's API for the sole purpose of generating cocktail recommendations. Photos are not stored permanently.</p>
+      <p>We do not sell, share, or distribute your information to any other third party. No mobile opt-in data, phone numbers, or email addresses will be shared with third parties or affiliates for marketing or promotional purposes.</p>
     </section>
 
     <section>
       <h2>Opting out</h2>
-      <p>Reply <strong>STOP</strong> at any time to stop receiving messages and delete your data from our system. Reply <strong>START</strong> to resume.</p>
+      <p>Reply <strong>STOP</strong> at any time to stop receiving messages. Reply <strong>START</strong> to resume. If you'd like your data deleted, email hello@collinthomas.bar and we'll take care of it. To stop email, use the unsubscribe link in any email or write to hello@collinthomas.bar.</p>
     </section>
 
     <section>
       <h2>Contact</h2>
-      <p>For questions about this policy, text the number directly.</p>
+      <p>For questions about this policy, email <strong>hello@collinthomas.bar</strong> or text the number directly.</p>
     </section>
 
   </main>
 
-  <footer>
-    <p>© 2026 Collin Thomas &nbsp;·&nbsp; <a href="/terms.html">Terms of Service</a></p>
+  <footer class="foot">
+    <div class="foot-in">
+      <div class="foot-links">
+        <span>© 2026 Collin Thomas</span><span aria-hidden="true">·</span>
+        <a href="/privacy.html">Privacy</a><span aria-hidden="true">·</span>
+        <a href="/terms.html">Terms</a><span aria-hidden="true">·</span>
+        <span>hello@collinthomas.bar</span>
+      </div>
+      <span>4719 Stafford Circle, Charlotte, NC 28211</span>
+    </div>
   </footer>
 
 </body>

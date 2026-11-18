@@ -27,6 +27,11 @@ async function initDb() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_step TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS opted_out BOOLEAN DEFAULT false;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS last_happy_hour TIMESTAMP;
+    -- Optional email from the landing page, for news and seasonal recipes.
+    -- Kept separate from SMS: never used to decide who gets texted.
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS email_opt_in_at TIMESTAMP;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS email_unsubscribed_at TIMESTAMP;
 
     CREATE TABLE IF NOT EXISTS recipes (
       id              SERIAL PRIMARY KEY,
@@ -943,12 +948,23 @@ app.post('/join', joinIpLimiter, joinPhoneLimiter, async (req, res) => {
     return res.status(400).json({ error: 'invalid phone number' });
   }
 
+  // Email is optional. Blank means "no email", anything else must look real.
+  let email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+  if (email && (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email))) {
+    return res.status(400).json({ error: 'invalid email' });
+  }
+  email = email || null;
+
   try {
     await pool.query(
-      `INSERT INTO users (phone_number, last_contacted)
-       VALUES ($1, now())
-       ON CONFLICT (phone_number) DO UPDATE SET last_contacted = now()`,
-      [phone]
+      `INSERT INTO users (phone_number, last_contacted, email, email_opt_in_at)
+       VALUES ($1, now(), $2::text, CASE WHEN $2::text IS NULL THEN NULL ELSE now() END)
+       ON CONFLICT (phone_number) DO UPDATE SET
+         last_contacted = now(),
+         email = COALESCE(EXCLUDED.email, users.email),
+         email_opt_in_at = CASE WHEN EXCLUDED.email IS NOT NULL THEN now() ELSE users.email_opt_in_at END,
+         email_unsubscribed_at = CASE WHEN EXCLUDED.email IS NOT NULL THEN NULL ELSE users.email_unsubscribed_at END`,
+      [phone, email]
     );
   } catch (err) {
     // Don't block the signup on a DB hiccup — the SMS opt-in is the
@@ -1361,6 +1377,34 @@ app.post('/sms-telnyx', async (req, res) => {
 });
 
 // ── Admin stats endpoint ────────────────────────────────────────────────────
+// Email list export for whenever a mailing service gets picked.
+// Same token gate as the stats endpoint. Returns CSV: email, opted-in date.
+app.get('/admin/api/emails.csv', async (req, res) => {
+  const token = req.headers['x-admin-token'] || req.query.token;
+
+  if (!process.env.ADMIN_TOKEN || token !== process.env.ADMIN_TOKEN) {
+    return res.status(401).json({ error: 'unauthorized' });
+  }
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT email, email_opt_in_at
+       FROM users
+       WHERE email IS NOT NULL AND email_unsubscribed_at IS NULL
+       ORDER BY email_opt_in_at`
+    );
+    const csv = ['email,opted_in_at']
+      .concat(rows.map(r => `${r.email},${r.email_opt_in_at ? r.email_opt_in_at.toISOString() : ''}`))
+      .join('\n');
+    res.set('Content-Type', 'text/csv');
+    res.set('Content-Disposition', 'attachment; filename="collin-emails.csv"');
+    res.send(csv + '\n');
+  } catch (err) {
+    console.error('Error exporting emails:', err.message);
+    res.status(500).json({ error: 'export failed' });
+  }
+});
+
 app.get('/admin/api/stats', async (req, res) => {
   const token = req.headers['x-admin-token'] || req.query.token;
 
