@@ -2,590 +2,486 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Collin Thomas — Craft Bartender</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Collin Thomas, AI bartender</title>
+<meta name="description" content="Text Collin, an AI craft bartender, what's in your bar. He pitches two or three drinks, you pick one, and he sends the recipe. Free, 21+.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://www.collinthomas.bar/">
+<meta property="og:title" content="Collin Thomas, AI bartender">
+<meta property="og:description" content="Text Collin, an AI craft bartender, what's in your bar. He pitches two or three drinks, you pick one, and he sends the recipe. Free, 21+.">
+<meta property="og:image" content="https://www.collinthomas.bar/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Collin Thomas logo on orange">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#FF683C">
+<link rel="icon" type="image/svg+xml" href="/logo-mark.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gloock&family=Schibsted+Grotesk:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  /* One orange band carries the ask. Everything after is zinc, paper and ink.
+     orange #FF683C · amber #F7A140 · ink #1B1714 · zinc #EEEFEB · paper #FFF
+     muted #57514B · deep #C43A17 · error #B3261E */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  html, body { background: #EEEFEB; color: #1B1714; }
+  body { font-family: 'Schibsted Grotesk', Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+  img { display: block; max-width: 100%; }
+  a { color: inherit; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+  a:hover { text-decoration-thickness: 2px; }
+  a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid #1B1714; outline-offset: 2px; }
+  input, select, button { font: inherit; }
+  input::placeholder { color: #767069; }
+  [hidden] { display: none !important; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 
-  html, body {
-    min-height: 100%;
-    width: 100%;
-    background: #F5F3EE;
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    color: #1A1916;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-  }
+  .display { font-family: 'Gloock', Georgia, serif; font-weight: 400; letter-spacing: -0.01em; }
+  .mono { font-family: 'Spline Sans Mono', ui-monospace, Menlo, monospace; }
+  .section { padding: clamp(56px, 8vw, 112px) max(16px, 5vw); }
+  .wrap { max-width: 1240px; margin: 0 auto; }
+  .section-title { font-size: clamp(40px, 4.6vw, 64px); line-height: 0.95; }
 
-  .wrap {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    width: 100%;
-    max-width: 380px;
-    padding: 48px 32px 64px;
-  }
+  /* Hero */
+  .hero { background: #FF683C; padding: 0 max(16px, 5vw) clamp(40px, 6vw, 88px); }
+  .top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; padding: 20px 0; }
+  .brand-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+  .chip { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; padding: 5px 9px; border: 1.5px solid #1B1714; border-radius: 3px; }
+  .top-link { font-size: 15px; font-weight: 600; }
+  .hero-body { padding-top: clamp(20px, 5vw, 64px); display: flex; flex-wrap: wrap; align-items: flex-end; gap: clamp(32px, 5vw, 80px); }
+  .hero-copy { flex: 1 1 440px; min-width: 0; display: flex; flex-direction: column; gap: 24px; padding-bottom: 8px; }
+  .hero h1 { font-size: clamp(52px, 8.6vw, 132px); line-height: 0.92; letter-spacing: -0.015em; text-wrap: balance; }
+  .lede { max-width: 34ch; font-size: clamp(18px, 1.7vw, 22px); line-height: 1.45; font-weight: 500; text-wrap: pretty; }
 
-  .avatar {
-    width: 72px;
-    height: 72px;
-    border-radius: 50%;
-    background: #C8C4BC;
-    margin-bottom: 32px;
-    overflow: hidden;
-    flex-shrink: 0;
-  }
+  /* Signup card */
+  .card { flex: 1 1 340px; max-width: 460px; min-width: 0; background: #FFF; border-radius: 6px; padding: clamp(20px, 3vw, 32px); box-shadow: 0 1px 0 rgba(27,23,20,.25), 0 28px 56px -28px rgba(27,23,20,.55); scroll-margin-top: 24px; }
+  form { display: flex; flex-direction: column; gap: 20px; }
+  .card-head { display: flex; flex-direction: column; gap: 6px; }
+  .card-head h2 { font-size: 34px; line-height: 1; }
+  .card-head p { font-size: 15px; line-height: 1.45; color: #57514B; }
+  .note { font-size: 14px; line-height: 1.45; padding: 10px 12px; border-radius: 4px; background: #FDE8D9; }
+  fieldset { border: 0; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+  legend, .field-label { font-size: 15px; font-weight: 600; }
+  legend { margin-bottom: 8px; }
+  .dob { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, .8fr) minmax(0, 1fr); gap: 8px; }
+  .field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .field.small { gap: 4px; }
+  .small-label { font-size: 12px; color: #57514B; }
+  .label-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .aside { font-size: 13px; color: #57514B; }
+  .hint { font-size: 13px; line-height: 1.45; color: #57514B; }
+  .input { height: 52px; width: 100%; padding: 0 12px; border: 1.5px solid rgba(27,23,20,.28); border-radius: 4px; background: #FFF; color: #1B1714; font-size: 17px; }
+  .input.tel { font-size: 18px; padding: 0 14px; font-variant-numeric: tabular-nums; }
+  select.input { padding: 0 10px; cursor: pointer; }
+  .input.bad { border-color: #B3261E; }
+  .err { font-size: 14px; font-weight: 600; color: #B3261E; }
+  .consent { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 12px; align-items: start; cursor: pointer; padding: 14px; border-radius: 4px; background: #EEEFEB; }
+  .consent input { width: 22px; height: 22px; margin-top: 1px; accent-color: #1B1714; cursor: pointer; }
+  .consent span { font-size: 13px; line-height: 1.5; color: #3F3A35; }
+  .consent strong { color: #1B1714; font-weight: 600; }
+  .btn { height: 56px; width: 100%; border: 0; border-radius: 4px; background: #1B1714; color: #FFF; font-size: 17px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none; }
+  .btn:hover { background: #3A322C; }
+  .btn:disabled { opacity: .6; cursor: default; }
+  .done { display: flex; flex-direction: column; gap: 14px; padding: 8px 0; }
+  .done h2 { font-size: 44px; line-height: 0.95; }
+  .done p { font-size: 17px; line-height: 1.5; }
+  .done .sub { font-size: 15px; color: #57514B; }
+  .num { font-family: 'Spline Sans Mono', ui-monospace, Menlo, monospace; font-weight: 500; white-space: nowrap; }
+  .text-btn { align-self: flex-start; border: 0; background: none; color: #1B1714; font-size: 15px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 
-  .avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center top;
-  }
+  /* Bubbles */
+  .bubble { max-width: 82%; padding: 10px 14px; font-size: 15px; line-height: 1.45; }
+  .bubble.me { align-self: flex-end; border-radius: 14px 14px 4px 14px; background: #F7A140; color: #1B1714; }
+  .bubble.him { align-self: flex-start; max-width: 88%; border-radius: 14px 14px 14px 4px; background: #EEEFEB; line-height: 1.5; }
 
-  .eyebrow {
-    font-size: 10px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: #999690;
-    margin-bottom: 8px;
-  }
+  /* Features */
+  .features .wrap { display: flex; flex-direction: column; gap: clamp(32px, 4vw, 56px); }
+  .feature-row { display: flex; flex-wrap: wrap; gap: clamp(40px, 4vw, 56px); }
+  .feature { flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: 18px; padding-top: 24px; border-top: 1px solid #1B1714; }
+  .feature h3 { font-size: clamp(28px, 2.6vw, 34px); line-height: 1.05; }
+  .feature p:last-child { font-size: 16px; line-height: 1.55; color: #57514B; max-width: 40ch; }
 
-  .name {
-    font-size: 28px;
-    font-weight: 300;
-    color: #1A1916;
-    letter-spacing: -0.02em;
-    margin-bottom: 24px;
-    line-height: 1.1;
-  }
+  /* How it works */
+  .how { background: #FFF; border-top: 1px solid rgba(27,23,20,.12); }
+  .split { display: flex; flex-wrap: wrap; align-items: flex-start; gap: clamp(40px, 6vw, 96px); }
+  .steps-col { flex: 1 1 340px; min-width: 0; display: flex; flex-direction: column; gap: 36px; }
+  .steps { list-style: none; display: flex; flex-direction: column; gap: 28px; }
+  .steps li { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 16px; align-items: start; padding-top: 20px; border-top: 1px solid rgba(27,23,20,.16); }
+  .step-num { font-family: 'Gloock', Georgia, serif; font-size: 44px; line-height: 0.9; color: #C43A17; }
+  .steps h3 { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
+  .steps p { font-size: 16px; line-height: 1.55; color: #57514B; max-width: 42ch; }
+  .thread { flex: 1 1 380px; max-width: 520px; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+  .phone { background: #FFF; border: 1px solid rgba(27,23,20,.16); border-radius: 6px; overflow: hidden; }
+  .phone-head { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid rgba(27,23,20,.12); }
+  .avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; object-position: 50% 22%; background: #1B1714; }
+  .phone-name { display: flex; flex-direction: column; gap: 2px; }
+  .phone-name strong { font-size: 16px; font-weight: 600; }
+  .phone-name span { font-size: 12px; color: #57514B; }
+  .messages { display: flex; flex-direction: column; gap: 10px; padding: 18px; }
+  .pre { white-space: pre-line; }
+  .caption { font-size: 12px; line-height: 1.5; color: #57514B; }
 
-  .rule {
-    width: 100%;
-    height: 1px;
-    background: #C8C4BC;
-    margin-bottom: 24px;
-  }
+  /* About */
+  .about { border-top: 1px solid rgba(27,23,20,.12); }
+  .portrait { flex: 0 1 300px; max-width: 100%; aspect-ratio: 4 / 5; border-radius: 6px; overflow: hidden; background: #1B1714; }
+  .portrait img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; }
+  .about-copy { flex: 1 1 420px; min-width: 0; max-width: 640px; display: flex; flex-direction: column; gap: 22px; }
+  .about-copy .big { font-size: 20px; line-height: 1.5; text-wrap: pretty; }
+  .about-copy .more { font-size: 17px; line-height: 1.55; color: #57514B; text-wrap: pretty; }
+  .facts { margin-top: 8px; display: flex; flex-direction: column; font-size: 15px; line-height: 1.5; border-bottom: 1px solid rgba(27,23,20,.16); }
+  .facts div { display: grid; grid-template-columns: minmax(96px, 128px) minmax(0, 1fr); gap: 16px; padding: 12px 0; border-top: 1px solid rgba(27,23,20,.16); }
+  .facts dt { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #57514B; padding-top: 3px; }
 
-  .headline {
-    font-size: 13px;
-    font-weight: 500;
-    color: #1A1916;
-    letter-spacing: 0.01em;
-    margin-bottom: 12px;
-    line-height: 1.4;
-  }
+  /* FAQ */
+  .faq { background: #FFF; border-top: 1px solid rgba(27,23,20,.12); }
+  .faq-intro { flex: 1 1 300px; min-width: 0; max-width: 420px; display: flex; flex-direction: column; gap: 16px; }
+  .faq-intro p { font-size: 16px; line-height: 1.55; color: #57514B; }
+  .faq-intro a { color: #1B1714; font-weight: 500; }
+  .faq-list { flex: 2 1 480px; min-width: 0; border-top: 1px solid rgba(27,23,20,.16); }
+  .faq-list details { border-bottom: 1px solid rgba(27,23,20,.16); }
+  .faq-list summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: minmax(0, 1fr) 24px; gap: 16px; align-items: baseline; padding: 20px 0; font-size: 19px; font-weight: 600; line-height: 1.35; }
+  .faq-list summary::-webkit-details-marker { display: none; }
+  .faq-list summary::after { content: "+"; font-family: 'Spline Sans Mono', ui-monospace, Menlo, monospace; font-weight: 400; font-size: 22px; text-align: right; color: #C43A17; }
+  .faq-list details[open] summary::after { content: "−"; }
+  .faq-list summary:hover { color: #C43A17; }
+  .faq-list details p { margin: 0 40px 22px 0; font-size: 16px; line-height: 1.6; color: #3F3A35; max-width: 62ch; }
 
-  .bio {
-    font-size: 13px;
-    font-weight: 400;
-    color: #6B6860;
-    line-height: 1.7;
-    margin-bottom: 8px;
-  }
-
-  .section-label {
-    font-size: 10px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: #999690;
-    margin: 32px 0 16px;
-    width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .section-label::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: #C8C4BC;
-  }
-
-  .options {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-bottom: 32px;
-  }
-
-  .card {
-    width: 100%;
-    border: 1px solid #C8C4BC;
-    border-radius: 0;
-    padding: 20px;
-  }
-
-  .card-label {
-    font-size: 10px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: #999690;
-    margin-bottom: 8px;
-  }
-
-  .card-title {
-    font-size: 15px;
-    font-weight: 500;
-    color: #1A1916;
-    margin-bottom: 6px;
-  }
-
-  .card-desc {
-    font-size: 12px;
-    color: #6B6860;
-    line-height: 1.6;
-    margin-bottom: 16px;
-  }
-
-  .age-gate-wrap {
-    width: 100%;
-    margin-bottom: 28px;
-  }
-
-  .age-gate-label {
-    font-size: 10px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: #999690;
-    margin-bottom: 12px;
-    display: block;
-  }
-
-  .dob-row {
-    display: flex;
-    gap: 8px;
-    width: 100%;
-  }
-
-  .dob-select {
-    flex: 1;
-    padding: 12px 8px;
-    background: transparent;
-    border: none;
-    border-bottom: 1px solid #C8C4BC;
-    border-radius: 0;
-    font-family: inherit;
-    font-size: 14px;
-    color: #1A1916;
-    outline: none;
-    cursor: pointer;
-    -webkit-appearance: none;
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23999690'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 4px center;
-  }
-
-  .dob-select:focus { border-bottom-color: #6B6860; }
-  .dob-select option { color: #1A1916; }
-
-  .age-error {
-    display: none;
-    font-size: 11px;
-    color: #C05A3A;
-    margin-top: 10px;
-  }
-
-  .age-error.visible { display: block; }
-
-  .phone-section {
-    display: none;
-  }
-
-  .phone-section.visible {
-    display: block;
-  }
-
-  .field-label {
-    font-size: 10px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #999690;
-    margin-bottom: 8px;
-  }
-
-  input.phone-input {
-    display: block;
-    width: 100%;
-    padding: 12px 0;
-    background: transparent;
-    background-image: none;
-    border: none;
-    border-radius: 0;
-    border-bottom: 1px solid #C8C4BC;
-    font-family: inherit;
-    font-size: 15px;
-    color: #1A1916;
-    outline: none;
-    margin-bottom: 16px;
-    letter-spacing: 0.04em;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    box-shadow: none;
-  }
-
-  input.phone-input::placeholder { color: #C8C4BC; }
-  input.phone-input:focus { border-bottom-color: #6B6860; }
-
-  .consent-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    margin-bottom: 16px;
-  }
-
-  input.consent-checkbox {
-    width: 14px;
-    height: 14px;
-    flex-shrink: 0;
-    margin-top: 2px;
-    border: 1px solid #C8C4BC;
-    border-radius: 0;
-    background: transparent;
-    background-image: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    cursor: pointer;
-    box-shadow: none;
-    position: relative;
-  }
-
-  input.consent-checkbox:checked {
-    background: #1A1916;
-    border-color: #1A1916;
-  }
-
-  input.consent-checkbox:checked::after {
-    content: '';
-    position: absolute;
-    left: 3px;
-    top: 1px;
-    width: 5px;
-    height: 8px;
-    border: 2px solid #F5F3EE;
-    border-top: none;
-    border-left: none;
-    transform: rotate(45deg);
-  }
-
-  .consent-label {
-    font-size: 12px;
-    color: #999690;
-    line-height: 1.6;
-    cursor: pointer;
-  }
-
-  .consent-label a {
-    color: #6B6860;
-    text-decoration: underline;
-    text-underline-offset: 2px;
-  }
-
-  .btn {
-    display: block;
-    width: 100%;
-    padding: 14px 24px;
-    border: 1px solid #1A1916;
-    border-radius: 0;
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: 400;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    cursor: pointer;
-    text-align: center;
-    text-decoration: none;
-    background: transparent;
-    background-image: none;
-    color: #1A1916;
-    transition: background 0.2s, color 0.2s, border-color 0.2s;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    box-shadow: none;
-    margin: 0;
-    line-height: normal;
-  }
-
-  .btn-primary:disabled,
-  .btn-primary.disabled {
-    border-color: #D9D5CC;
-    color: #C8C4BC;
-    cursor: default;
-    background: transparent;
-  }
-
-  .btn-primary:not(:disabled):not(.disabled) {
-    background: #1A1916;
-    color: #F5F3EE;
-    border-color: #1A1916;
-  }
-
-  .btn-primary:not(:disabled):not(.disabled):active {
-    background: #3A3834;
-  }
-
-  .error-msg {
-    display: none;
-    font-size: 11px;
-    color: #C05A3A;
-    margin-top: 12px;
-  }
-
-  .error-msg.visible { display: block; }
-
-  .success {
-    display: none;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .success.visible { display: flex; }
-
-  .success-text {
-    font-size: 13px;
-    color: #1A1916;
-    font-weight: 400;
-    letter-spacing: 0.01em;
-  }
-
-  .footer-links {
-    font-size: 10px;
-    color: #C8C4BC;
-    letter-spacing: 0.06em;
-  }
-
-  .footer-links a {
-    color: #C8C4BC;
-    text-decoration: none;
-  }
-
-  .footer-links a:hover { color: #999690; }
+  /* Close + footer */
+  .close { background: #1B1714; color: #EEEFEB; padding: clamp(48px, 7vw, 96px) max(16px, 5vw) 28px; }
+  .close .wrap { display: flex; flex-direction: column; gap: clamp(40px, 6vw, 72px); }
+  .close-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 24px; }
+  .close h2 { font-size: clamp(44px, 6vw, 88px); line-height: 0.95; }
+  .btn-orange { height: 56px; padding: 0 28px; border-radius: 4px; background: #FF683C; color: #1B1714; font-size: 17px; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 10px; }
+  .btn-orange:hover { background: #FF845F; }
+  .foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 32px; padding-top: 20px; border-top: 1px solid rgba(238,239,235,.18); font-size: 13px; line-height: 1.5; color: #BDB8B1; }
+  .foot-links { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+  .foot a { color: #EEEFEB; }
 </style>
 </head>
 <body>
 
-<div class="wrap">
-
-  <div class="avatar">
-    <img src="collin.jpg" alt="Collin Thomas">
-  </div>
-
-  <div class="eyebrow">Craft Bartender</div>
-  <div class="name">Collin Thomas</div>
-  <div class="rule"></div>
-
-  <div class="headline">Your personal bartender, available by text or browser.</div>
-  <div class="bio">Not a recipe database — more like a friend who's been bartending for twenty years and actually wants to talk about what you're making.</div>
-
-
-  <div id="formWrap" style="width:100%; margin-bottom: 32px;">
-    <div class="age-gate-wrap">
-      <span class="age-gate-label">Date of birth</span>
-      <div class="dob-row">
-        <select class="dob-select" id="dobMonth">
-          <option value="" disabled selected>Month</option>
-          <option value="1">January</option>
-          <option value="2">February</option>
-          <option value="3">March</option>
-          <option value="4">April</option>
-          <option value="5">May</option>
-          <option value="6">June</option>
-          <option value="7">July</option>
-          <option value="8">August</option>
-          <option value="9">September</option>
-          <option value="10">October</option>
-          <option value="11">November</option>
-          <option value="12">December</option>
-        </select>
-        <select class="dob-select" id="dobDay">
-          <option value="" disabled selected>Day</option>
-        </select>
-        <select class="dob-select" id="dobYear">
-          <option value="" disabled selected>Year</option>
-        </select>
+<section class="hero">
+  <div class="wrap">
+    <header class="top">
+      <div class="brand-row">
+        <a href="/" class="brand" aria-label="Collin Thomas home">
+          <img src="/logo-mark.svg" alt="" height="32" style="height:32px;width:auto">
+          <img src="/logo-wordmark.svg" alt="Collin Thomas" height="20" style="height:20px;width:auto">
+        </a>
+        <span class="chip mono">AI bartender · 21+</span>
       </div>
-      <div class="age-error" id="ageError">You must be 21 or older to use this service.</div>
-    </div>
+      <a href="/collin.html" class="top-link">Chat in your browser</a>
+    </header>
 
-    <div class="phone-section" id="phoneSection">
-      <div class="field-label">Your phone number</div>
-      <input
-        type="tel"
-        class="phone-input"
-        id="phoneInput"
-        placeholder="(555) 000-0000"
-        maxlength="14"
-        inputmode="tel"
-        autocomplete="tel"
-      />
-
-      <div class="consent-row">
-        <input type="checkbox" class="consent-checkbox" id="consentBox" />
-        <label class="consent-label" for="consentBox">
-          Check this box if you'd like to receive drink recommendations via SMS. Msg frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out, HELP for help. No opt-in data shared with third parties for marketing. &nbsp;
-          <a href="/privacy.html" target="_blank">Privacy</a> &nbsp;·&nbsp;
-          <a href="/terms.html" target="_blank">Terms</a>
-        </label>
+    <div class="hero-body">
+      <div class="hero-copy">
+        <h1 class="display">What should I make tonight?</h1>
+        <p class="lede">Text Collin what's in your bar. He pitches two or three drinks, you pick one, and he sends the full recipe.</p>
       </div>
 
-      <button class="btn btn-primary" id="submitBtn">Chat with Collin</button>
+      <div class="card" id="signup">
+        <form id="joinForm" novalidate>
+          <div class="card-head">
+            <h2 class="display">Pull up a stool.</h2>
+            <p>21 and up only.</p>
+          </div>
 
-      <div class="error-msg" id="errorMsg">Something went wrong — try again in a moment.</div>
+          <p class="note" id="chatNote" hidden>Confirm your birthday to chat in your browser. You can leave the number blank.</p>
+
+          <fieldset>
+            <legend>Your birthday</legend>
+            <div class="dob">
+              <label class="field small">
+                <span class="small-label">Month</span>
+                <select class="input" id="dobMonth" autocomplete="bday-month">
+                  <option value="">Select</option>
+                  <option value="1">January</option><option value="2">February</option><option value="3">March</option>
+                  <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+                  <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+                  <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+                </select>
+              </label>
+              <label class="field small">
+                <span class="small-label">Day</span>
+                <input class="input" id="dobDay" inputmode="numeric" autocomplete="bday-day" maxlength="2" placeholder="DD">
+              </label>
+              <label class="field small">
+                <span class="small-label">Year</span>
+                <input class="input" id="dobYear" inputmode="numeric" autocomplete="bday-year" maxlength="4" placeholder="YYYY">
+              </label>
+            </div>
+            <p class="err" id="ageError" role="alert" hidden></p>
+          </fieldset>
+
+          <label class="field">
+            <span class="label-row"><span class="field-label">Mobile number</span><span class="aside">Needed for texts</span></span>
+            <input class="input tel" id="phoneInput" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(704) 555-0123">
+            <span class="err" id="phoneError" role="alert" hidden>Enter a 10-digit US mobile number.</span>
+          </label>
+
+          <label class="field">
+            <span class="label-row"><span class="field-label">Email</span><span class="aside">Optional</span></span>
+            <input class="input" id="emailInput" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com">
+            <span class="err" id="emailError" role="alert" hidden>Check your email address, or leave it blank.</span>
+            <span class="hint">For occasional news about Collin and seasonal recipes. Unsubscribe anytime.</span>
+          </label>
+
+          <label class="consent">
+            <input type="checkbox" id="consentBox">
+            <span><strong>Yes, text me drink recommendations from Collin Thomas.</strong> Msg frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out, HELP for help. No opt-in data shared with third parties for marketing. <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a></span>
+          </label>
+
+          <button type="submit" class="btn" id="submitBtn"><span id="btnLabel">Sign me up</span> <span aria-hidden="true">→</span></button>
+          <p class="err" id="formError" role="alert" hidden>That didn't go through. Give it a minute and try again.</p>
+        </form>
+
+        <div class="done" id="doneTexts" role="status" hidden>
+          <h2 class="display">Check your phone.</h2>
+          <p>Collin's first text is on the way from <span class="num">(704) 368-1265</span>. Save the number so you know it's him.</p>
+          <a class="btn" href="/collin.vcf">Add Collin to your contacts</a>
+          <p class="sub">He'll start by asking your name and what kind of bar you're working with.</p>
+        </div>
+
+        <div class="done" id="doneWeb" role="status" hidden>
+          <h2 class="display">You're in.</h2>
+          <p>You didn't opt in to texts, so Collin won't message you. You can still talk drinks with him in your browser.</p>
+          <a class="btn" href="/collin.html">Chat in your browser <span aria-hidden="true">→</span></a>
+          <button type="button" class="text-btn" id="goBack">Changed your mind? Go back</button>
+        </div>
+      </div>
     </div>
   </div>
+</section>
 
-  <div class="success" id="successMsg">
-    <div class="success-text">You're all set. Check your texts — Collin will be in touch shortly.</div>
+<section class="section features">
+  <div class="wrap">
+    <h2 class="display section-title">Text Collin when…</h2>
+    <div class="feature-row">
+      <article class="feature">
+        <p class="bubble me">Had a drink in Asheville last night. Gin, something bitter, rosemary? It was pink.</p>
+        <h3 class="display">…you had something great out.</h3>
+        <p>Describe a drink you loved, even vaguely. Collin works out what it probably was and gives you the recipe to make it at home.</p>
+      </article>
+      <article class="feature">
+        <p class="bubble me">Bourbon, sweet vermouth, an orange, and some maple syrup. Ideas?</p>
+        <h3 class="display">…you're staring at your bar.</h3>
+        <p>Send him your bottles and odds and ends. He comes back with two or three drinks you can make right now.</p>
+      </article>
+      <article class="feature">
+        <p class="bubble me">Something good with rye. Go.</p>
+        <h3 class="display">…you'd rather sip than search.</h3>
+        <p>No recipe blogs, no pop-ups, no twelve open tabs. Ask once, get a good answer, and get back to your evening.</p>
+      </article>
+    </div>
   </div>
+</section>
 
-  <div class="footer-links">
-    © 2026 Collin Thomas &nbsp;·&nbsp;
-    <a href="/privacy.html">Privacy</a> &nbsp;·&nbsp;
-    <a href="/terms.html">Terms</a><br><br>
-    <span id="email"></span><br>
-    4719 Stafford Circle, Charlotte, NC 28211
+<section class="section how">
+  <div class="wrap split">
+    <div class="steps-col">
+      <h2 class="display section-title">How a round goes</h2>
+      <ol class="steps">
+        <li><span class="step-num" aria-hidden="true">1</span><div><h3>Tell him what you've got.</h3><p>A few bottles, half a grapefruit, a mood. Texting from the liquor store aisle works too.</p></div></li>
+        <li><span class="step-num" aria-hidden="true">2</span><div><h3>He pitches a few drinks.</h3><p>Two or three options, A, B, and C, each with a quick read on what you're in for.</p></div></li>
+        <li><span class="step-num" aria-hidden="true">3</span><div><h3>Pick one, get the recipe.</h3><p>Reply with a letter. He sends measurements, method, and garnish.</p></div></li>
+      </ol>
+    </div>
+
+    <figure class="thread">
+      <div class="phone">
+        <div class="phone-head">
+          <img class="avatar" src="/collin.jpg" alt="">
+          <div class="phone-name"><strong>Collin Thomas</strong><span class="mono">(704) 368-1265</span></div>
+        </div>
+        <div class="messages">
+          <p class="bubble me">Got mezcal, half a grapefruit, and honey. What are we making?</p>
+          <p class="bubble him pre">Good bones. Three ways to go:
+A) Tall and easy. Honey paloma, topped with soda if you have it.
+B) Shaken sour. Grapefruit, honey, pinch of salt, big rock.
+C) Stirred and slow. Mezcal, honey, grapefruit peel.</p>
+          <p class="bubble me">B. No soda anyway.</p>
+          <p class="bubble him">Sour it is. 2 oz mezcal, 1 oz fresh grapefruit, ¾ oz honey syrup (1:1 with warm water), pinch of salt. Shake hard, strain over a big rock, express a grapefruit peel over the top. Tell me how it lands.</p>
+        </div>
+      </div>
+      <figcaption class="caption mono">Example conversation. Collin writes every reply fresh.</figcaption>
+    </figure>
   </div>
+</section>
 
-  <script>
-    // Obfuscated email
-    const u = 'hello', d = 'collinthomas.bar';
-    const el = document.getElementById('email');
-    el.innerHTML = '<a href="mailto:' + u + '@' + d + '">' + u + '@' + d + '</a>';
-  </script>
+<section class="section about">
+  <div class="wrap split">
+    <div class="portrait">
+      <img src="/collin.jpg" alt="Collin Thomas behind the bar, sleeves rolled up, leaning on the bar top with a towel in hand" loading="lazy">
+    </div>
+    <div class="about-copy">
+      <h2 class="display section-title">Who's Collin?</h2>
+      <p class="big">Collin is an AI bartender with real opinions. He knows the classics cold, builds around what you actually have, and tells you straight what he'd make.</p>
+      <p class="more">He's not a recipe database. Think of him as a craft bartender on call, for home bars that have outgrown the basics. He'll make you a great margarita when that's what you want, and he's even better at finding the drink you never knew you wanted.</p>
+      <dl class="facts">
+        <div><dt class="mono">Backstory</dt><dd>Twenty years behind the bar in Boston, Portland, Seattle, and Vancouver BC.</dd></div>
+        <div><dt class="mono">Repertoire</dt><dd>Fifty house standards, but like any good bartender, he's always improvising.</dd></div>
+        <div><dt class="mono">Obsessions</dt><dd>They rotate with the seasons. Expect him to slip in whatever he's into right now.</dd></div>
+      </dl>
+    </div>
+  </div>
+</section>
 
-</div>
+<section class="section faq">
+  <div class="wrap split">
+    <div class="faq-intro">
+      <h2 class="display section-title">Good questions</h2>
+      <p>Something else? Email <span class="js-email">hello at collinthomas dot bar</span> or just ask Collin.</p>
+    </div>
+    <div class="faq-list">
+      <details><summary>Is Collin a real person?</summary><p>No. Collin is an AI bartender. The opinions are his, the backstory is made up, and the recipes are the real thing.</p></details>
+      <details><summary>What does it cost?</summary><p>It's free. Your carrier's standard message and data rates still apply.</p></details>
+      <details><summary>Do I need to download an app?</summary><p>No. Collin is a regular phone number, so he works in the texting app you already use. If you'd rather type on a laptop, you can <a href="/collin.html">chat in your browser</a>.</p></details>
+      <details><summary>Why do you need my birthday?</summary><p>Collin talks about alcohol, so he's only for people 21 and up. We check once when you sign up.</p></details>
+      <details><summary>How often will he text me?</summary><p>Mostly when you text him. He might follow up the same night to ask how a drink turned out, or check in now and then. No promos, no mass texts.</p></details>
+      <details><summary>My bar isn't very stocked. Is this for me?</summary><p>Yes. Tell him what you have and he'll work with it. Ask what to buy next and he'll tell you which bottle opens up the most drinks.</p></details>
+      <details><summary>What happens to my number and email?</summary><p>Your number is for texting with Collin, and we keep your conversation so he has context next time. Your email, if you give it, is only for news about Collin and seasonal recipes. Neither is ever sold or shared for marketing. The <a href="/privacy.html">privacy policy</a> has the details.</p></details>
+      <details><summary>Does it work outside the US?</summary><p>Not yet. Texting works with US mobile numbers only. The browser chat works anywhere.</p></details>
+      <details><summary>Who's behind this?</summary><p>Ph Oster, a creative in Charlotte who loves tending bar at home. He built Collin for himself, to make better drinks and to learn more about AI along the way. If Collin makes your evening better, Ph would love to hear about it at <span class="js-email">hello at collinthomas dot bar</span>.</p></details>
+      <details><summary>How do I stop?</summary><p>Reply STOP. You'll get one confirmation and nothing after that. Reply START if you want back in, or HELP if you need a hand. For email, use the unsubscribe link at the bottom of any message.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="close">
+  <div class="wrap">
+    <div class="close-row">
+      <h2 class="display">The bar's open.</h2>
+      <a href="#signup" class="btn-orange">Pull up a stool <span aria-hidden="true">→</span></a>
+    </div>
+    <footer class="foot">
+      <div class="foot-links">
+        <span>© 2026 Collin Thomas</span><span aria-hidden="true">·</span>
+        <a href="/privacy.html">Privacy</a><span aria-hidden="true">·</span>
+        <a href="/terms.html">Terms</a><span aria-hidden="true">·</span>
+        <span class="js-email">hello at collinthomas dot bar</span>
+      </div>
+      <span>4719 Stafford Circle, Charlotte, NC 28211</span>
+    </footer>
+  </div>
+</section>
 
 <script>
-// ── DOB dropdowns ─────────────────────────────────────────────────────────────
-const dobMonth    = document.getElementById('dobMonth');
-const dobDay      = document.getElementById('dobDay');
-const dobYear     = document.getElementById('dobYear');
-const ageError    = document.getElementById('ageError');
-const phoneSection = document.getElementById('phoneSection');
+// Email shown as a link only once the page runs, to keep scrapers off it.
+(function () {
+  var u = 'hello', d = 'collinthomas.bar';
+  document.querySelectorAll('.js-email').forEach(function (el) {
+    el.innerHTML = '<a href="mailto:' + u + '@' + d + '">' + u + '@' + d + '</a>';
+  });
+})();
 
-// Populate years
-const currentYear = new Date().getFullYear();
-for (let y = currentYear; y >= currentYear - 100; y--) {
-  const o = document.createElement('option');
-  o.value = y;
-  o.textContent = y;
-  dobYear.appendChild(o);
-}
+// ── Signup ────────────────────────────────────────────────────────────────────
+(function () {
+  var AGE_KEY = 'collin_age_ok';
+  var $ = function (id) { return document.getElementById(id); };
+  var form = $('joinForm'), month = $('dobMonth'), day = $('dobDay'), year = $('dobYear');
+  var phone = $('phoneInput'), email = $('emailInput'), consent = $('consentBox');
+  var btn = $('submitBtn'), btnLabel = $('btnLabel');
+  var ageError = $('ageError'), phoneError = $('phoneError'), emailError = $('emailError'), formError = $('formError');
+  var doneTexts = $('doneTexts'), doneWeb = $('doneWeb');
 
-// Populate days based on month/year selection
-function populateDays() {
-  const m = parseInt(dobMonth.value) || 1;
-  const y = parseInt(dobYear.value) || 2000;
-  const selected = dobDay.value;
-  const daysInMonth = new Date(y, m, 0).getDate();
+  // Arrived from the browser chat without passing the age check.
+  if (/[?&]chat\b/.test(location.search)) $('chatNote').hidden = false;
 
-  dobDay.innerHTML = '<option value="" disabled selected>Day</option>';
-  for (let d = 1; d <= daysInMonth; d++) {
-    const o = document.createElement('option');
-    o.value = d;
-    o.textContent = d;
-    if (String(d) === selected) o.selected = true;
-    dobDay.appendChild(o);
-  }
-}
-
-populateDays();
-
-dobMonth.addEventListener('change', () => { populateDays(); checkAge(); });
-dobYear.addEventListener('change',  () => { populateDays(); checkAge(); });
-dobDay.addEventListener('change', checkAge);
-
-function checkAge() {
-  const m = parseInt(dobMonth.value);
-  const d = parseInt(dobDay.value);
-  const y = parseInt(dobYear.value);
-
-  if (!m || !d || !y) return;
-
-  const today = new Date();
-  const dob   = new Date(y, m - 1, d);
-  let age = today.getFullYear() - dob.getFullYear();
-  const monthDiff = today.getMonth() - dob.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) age--;
-
-  if (age >= 21) {
-    ageError.classList.remove('visible');
-    phoneSection.classList.add('visible');
-  } else {
-    ageError.classList.add('visible');
-    phoneSection.classList.remove('visible');
-  }
-}
-
-// ── Phone + submit ────────────────────────────────────────────────────────────
-const phoneInput = document.getElementById('phoneInput');
-const consentBox = document.getElementById('consentBox');
-const submitBtn  = document.getElementById('submitBtn');
-const errorMsg   = document.getElementById('errorMsg');
-const formWrap   = document.getElementById('formWrap');
-const successMsg = document.getElementById('successMsg');
-
-function formatPhone(val) {
-  const digits = val.replace(/\D/g, '').slice(0, 10);
-  if (digits.length <= 3) return digits;
-  if (digits.length <= 6) return `(${digits.slice(0,3)}) ${digits.slice(3)}`;
-  return `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
-}
-
-phoneInput.addEventListener('input', function() {
-  const raw = this.value.replace(/\D/g, '');
-  this.value = formatPhone(raw);
-});
-
-submitBtn.addEventListener('click', async () => {
-  const digits = phoneInput.value.replace(/\D/g, '');
-  const smsConsent = consentBox.checked;
-
-  // No phone — just go to chat
-  if (digits.length !== 10) {
-    window.location.href = '/collin.html';
-    return;
+  function digits(v) { return v.replace(/\D/g, ''); }
+  function formatPhone(v) {
+    var d = digits(v).replace(/^1(?=\d{10})/, '').slice(0, 10);
+    if (d.length < 4) return d;
+    if (d.length < 7) return '(' + d.slice(0, 3) + ') ' + d.slice(3);
+    return '(' + d.slice(0, 3) + ') ' + d.slice(3, 6) + '-' + d.slice(6);
   }
 
-  // Has phone — register, send SMS only if opted in
-  const phone = `+1${digits}`;
+  function ageCheck() {
+    var m = +month.value, d = +day.value, y = +year.value;
+    if (!m || !d || year.value.length !== 4) return 'Enter your full birthday.';
+    var dob = new Date(y, m - 1, d);
+    if (dob.getMonth() !== m - 1 || dob.getDate() !== d) return "That date doesn't exist. Check the day.";
+    var now = new Date();
+    if (y < now.getFullYear() - 120 || dob > now) return 'Check the year.';
+    if (dob > new Date(now.getFullYear() - 21, now.getMonth(), now.getDate())) return 'Collin only pours for 21 and up.';
+    return '';
+  }
 
-  submitBtn.disabled = true;
-  submitBtn.classList.add('disabled');
-  submitBtn.textContent = 'One sec...';
-  errorMsg.classList.remove('visible');
+  function updateLabel() {
+    var hasPhone = digits(phone.value).length > 0;
+    btnLabel.textContent = consent.checked ? 'Text me' : (hasPhone ? 'Sign me up' : 'Chat in your browser');
+  }
 
-  try {
-    const res = await fetch('/join', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, smsConsent })
+  function show(el, on) { el.hidden = !on; }
+  function mark(inputs, bad) { inputs.forEach(function (i) { i.classList.toggle('bad', bad); }); }
+
+  function rememberAge() {
+    try { localStorage.setItem(AGE_KEY, '1'); } catch (e) {}
+    try { sessionStorage.setItem(AGE_KEY, '1'); } catch (e) {}
+  }
+
+  [month, day, year].forEach(function (el) {
+    el.addEventListener('input', function () {
+      if (el === day) day.value = digits(day.value).slice(0, 2);
+      if (el === year) year.value = digits(year.value).slice(0, 4);
+      show(ageError, false); mark([month, day, year], false);
     });
+  });
+  phone.addEventListener('input', function () {
+    phone.value = formatPhone(phone.value);
+    show(phoneError, false); mark([phone], false); updateLabel();
+  });
+  email.addEventListener('input', function () { show(emailError, false); mark([email], false); });
+  consent.addEventListener('change', updateLabel);
 
-    if (!res.ok) throw new Error('server error');
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    show(formError, false);
 
-    if (smsConsent) {
-      formWrap.style.display = 'none';
-      successMsg.classList.add('visible');
-    } else {
-      window.location.href = '/collin.html';
+    var ageMsg = ageCheck();
+    var ph = digits(phone.value);
+    // A number is only required for texts. Blank means browser chat.
+    var phoneBad = consent.checked ? ph.length !== 10 : (ph.length > 0 && ph.length !== 10);
+    var em = email.value.trim();
+    var emailBad = em !== '' && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em);
+
+    ageError.textContent = ageMsg;
+    show(ageError, !!ageMsg); mark([month, day, year], !!ageMsg);
+    show(phoneError, phoneBad); mark([phone], phoneBad);
+    show(emailError, emailBad); mark([email], emailBad);
+    if (ageMsg || phoneBad || emailBad) return;
+
+    rememberAge();
+
+    // No number: straight to the browser chat.
+    if (!ph) { location.href = '/collin.html'; return; }
+
+    btn.disabled = true;
+    btnLabel.textContent = 'Sending…';
+    try {
+      var res = await fetch('/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: '+1' + ph, smsConsent: consent.checked, email: em })
+      });
+      if (!res.ok) throw new Error('server error');
+      form.hidden = true;
+      show(consent.checked ? doneTexts : doneWeb, true);
+    } catch (err) {
+      show(formError, true);
+    } finally {
+      btn.disabled = false;
+      updateLabel();
     }
+  });
 
-  } catch (err) {
-    errorMsg.classList.add('visible');
-    submitBtn.disabled = false;
-    submitBtn.classList.remove('disabled');
-    submitBtn.textContent = 'Chat with Collin';
-  }
-});
+  $('goBack').addEventListener('click', function () {
+    doneWeb.hidden = true;
+    form.hidden = false;
+  });
+
+  updateLabel();
+})();
 </script>
 </body>
 </html>

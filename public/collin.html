@@ -2,6 +2,17 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<script>
+  // Age gate: the landing page sets this flag after a 21+ birthday check.
+  // Without it, send people to the signup form first. If the browser blocks
+  // storage entirely there is no way to remember the check, so let them through.
+  (function () {
+    var k = 'collin_age_ok', ok;
+    try { ok = localStorage.getItem(k) === '1' || sessionStorage.getItem(k) === '1'; }
+    catch (e) { ok = true; }
+    if (!ok) location.replace('/?chat=1#signup');
+  })();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Collin Thomas</title>
 <style>
