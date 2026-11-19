@@ -118,9 +118,24 @@
   .phone-name { display: flex; flex-direction: column; gap: 2px; }
   .phone-name strong { font-size: 16px; font-weight: 600; }
   .phone-name span { font-size: 12px; color: #57514B; }
-  .messages { display: flex; flex-direction: column; gap: 10px; padding: 18px; }
+  .messages { position: relative; display: flex; flex-direction: column; gap: 10px; padding: 18px; }
   .pre { white-space: pre-line; }
   .caption { font-size: 12px; line-height: 1.5; color: #57514B; }
+
+  /* Example thread plays out like a live text exchange. JS adds .is-animated;
+     without JS, or with reduced motion, the whole thread shows as-is.
+     Hidden bubbles keep their space so the page never jumps. */
+  .messages.is-animated .bubble { opacity: 0; transform: translateY(8px) scale(.97); transition: opacity .28s ease-out, transform .28s ease-out; }
+  .messages.is-animated .bubble.me { transform-origin: 100% 100%; }
+  .messages.is-animated .bubble.him { transform-origin: 0 100%; }
+  .messages.is-animated .bubble.is-in { opacity: 1; transform: none; }
+  .messages.is-animated.is-clearing .bubble { opacity: 0; transform: none; transition-duration: .45s; }
+  .typing { position: absolute; left: 18px; display: flex; gap: 4px; padding: 14px; border-radius: 14px 14px 14px 4px; background: #EEEFEB; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .typing.is-on { opacity: 1; }
+  .typing i { width: 7px; height: 7px; border-radius: 50%; background: #57514B; opacity: .35; animation: typing 1.2s ease-in-out infinite; }
+  .typing i:nth-child(2) { animation-delay: .15s; }
+  .typing i:nth-child(3) { animation-delay: .3s; }
+  @keyframes typing { 0%, 60%, 100% { transform: translateY(0); opacity: .35; } 30% { transform: translateY(-3px); opacity: .9; } }
 
   /* About */
   .about { border-top: 1px solid rgba(27,23,20,.12); }
@@ -481,6 +496,83 @@ C) Stirred and slow. Mezcal, honey, grapefruit peel.</p>
   });
 
   updateLabel();
+})();
+
+// ── Example thread ────────────────────────────────────────────────────────────
+// Plays the example out like a real text exchange: your texts land, Collin
+// "types", his reply lands. Plays twice, then rests on the full thread.
+// Starts when it scrolls into view. Skipped entirely for reduced motion.
+(function () {
+  var box = document.querySelector('.thread .messages');
+  if (!box || !window.matchMedia) return;
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+  if (reduce.matches) return;
+
+  var bubbles = Array.prototype.slice.call(box.querySelectorAll('.bubble'));
+  var typing = document.createElement('div');
+  typing.className = 'typing';
+  typing.setAttribute('aria-hidden', 'true');
+  typing.innerHTML = '<i></i><i></i><i></i>';
+  box.appendChild(typing);
+  box.classList.add('is-animated');
+
+  var PLAYS = 2, played = 0;
+  var visible = !('IntersectionObserver' in window), running = false, timer;
+  function wait(ms, fn) { timer = setTimeout(fn, ms); }
+  // Give the reader time with the last bubble before the next one lands.
+  function readTime(el) { return Math.min(3200, Math.max(1200, el.textContent.length * 22)); }
+
+  function step(i) {
+    if (i >= bubbles.length) {
+      played++;
+      return played < PLAYS ? wait(6000, clear) : undefined;
+    }
+    var b = bubbles[i];
+    var pause = i === 0 ? 600 : readTime(bubbles[i - 1]);
+    if (b.classList.contains('me')) {
+      return wait(pause, function () { b.classList.add('is-in'); step(i + 1); });
+    }
+    wait(Math.min(pause, 900), function () {
+      typing.style.top = b.offsetTop + 'px';
+      typing.classList.add('is-on');
+      wait(1700, function () {
+        typing.classList.remove('is-on');
+        b.classList.add('is-in');
+        step(i + 1);
+      });
+    });
+  }
+
+  function clear() {
+    box.classList.add('is-clearing');
+    wait(500, function () {
+      bubbles.forEach(function (b) { b.classList.remove('is-in'); });
+      box.classList.remove('is-clearing');
+      if (visible) wait(400, function () { step(0); });
+      else running = false;
+    });
+  }
+
+  function start() { if (visible && !running) { running = true; step(0); } }
+
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (entries) {
+      visible = entries[0].isIntersecting;
+      start();
+    }, { threshold: 0.35 }).observe(box);
+  } else {
+    start();
+  }
+
+  // If someone turns on reduced motion mid-loop, stop and show the full thread.
+  function stop() {
+    if (!reduce.matches) return;
+    clearTimeout(timer);
+    box.classList.remove('is-animated', 'is-clearing');
+    typing.remove();
+  }
+  if (reduce.addEventListener) reduce.addEventListener('change', stop);
+  else if (reduce.addListener) reduce.addListener(stop);
 })();
 </script>
 </body>
