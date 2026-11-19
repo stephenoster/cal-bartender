@@ -500,7 +500,7 @@ C) Stirred and slow. Mezcal, honey, grapefruit peel.</p>
 
 // ── Example thread ────────────────────────────────────────────────────────────
 // Plays the example out like a real text exchange: your texts land, Collin
-// "types", his reply lands. Holds on the full thread, fades, and loops.
+// "types", his reply lands. Plays twice, then rests on the full thread.
 // Starts when it scrolls into view. Skipped entirely for reduced motion.
 (function () {
   var box = document.querySelector('.thread .messages');
@@ -516,13 +516,17 @@ C) Stirred and slow. Mezcal, honey, grapefruit peel.</p>
   box.appendChild(typing);
   box.classList.add('is-animated');
 
+  var PLAYS = 2, played = 0;
   var visible = !('IntersectionObserver' in window), running = false, timer;
   function wait(ms, fn) { timer = setTimeout(fn, ms); }
   // Give the reader time with the last bubble before the next one lands.
   function readTime(el) { return Math.min(3200, Math.max(1200, el.textContent.length * 22)); }
 
   function step(i) {
-    if (i >= bubbles.length) return wait(6000, clear);
+    if (i >= bubbles.length) {
+      played++;
+      return played < PLAYS ? wait(6000, clear) : undefined;
+    }
     var b = bubbles[i];
     var pause = i === 0 ? 600 : readTime(bubbles[i - 1]);
     if (b.classList.contains('me')) {
