@@ -468,6 +468,10 @@ C) Stirred and slow. Mezcal, honey, grapefruit peel.</p>
 
     rememberAge();
 
+    function browserTz() {
+      try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { return ''; }
+    }
+
     // No number: straight to the browser chat.
     if (!ph) { location.href = '/collin.html'; return; }
 
@@ -477,7 +481,7 @@ C) Stirred and slow. Mezcal, honey, grapefruit peel.</p>
       var res = await fetch('/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: '+1' + ph, smsConsent: consent.checked, email: em })
+        body: JSON.stringify({ phone: '+1' + ph, smsConsent: consent.checked, email: em, tz: browserTz() })
       });
       if (!res.ok) throw new Error('server error');
       form.hidden = true;

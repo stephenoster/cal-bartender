@@ -110,6 +110,24 @@ Ramos Gin Fizz: Gin, lemon, lime, simple, cream, egg white, orange flower water,
 
 Corpse Reviver #2: Equal parts gin, Cointreau, Lillet Blanc or Cocchi Americano, lemon, absinthe rinse. Savoy Cocktail Book, 1930. A morning-after drink with a warning attached: four in a row will unrevive the corpse. Same equal-parts structure as the Last Word.
 
+Zero-Proof Americano: NA bitter aperitif, NA rosso, soda, orange half-wheel, built over ice. Everyone asks for an NA Negroni, but zero-proof bottles go thin stirred and served up. Soda covers for the missing body. Pitch this instead.
+
+Zero-Proof Paloma: NA agave spirit, lime, a real pinch of salt, grapefruit soda. The salt does a lot of what the alcohol would have done. Squirt or Jarritos is still correct.
+
+Zero-Proof Whiskey Sour: NA whiskey alternative, lemon, honey syrup, egg white, dry shake then shake with ice. Whiskey alternatives are the weakest zero-proof category, no heat, no weight. The egg white and honey give the body back. Never promise it tastes like whiskey.
+
+Zero-Proof G&T: NA gin alternative, good tonic, a glass packed with ice, lime or cucumber. The tonic carries this drink, so it's really a tonic conversation. Cheap tonic sinks it.
+
+Lemon, Lime & Bitters: Lime and simple (or lime cordial), lemon-lime soda, 4 or 5 dashes Angostura. Australia's pub drink, what you order when you're driving. Angostura is about 45% alcohol, so it's a trace, not zero. Say so.
+
+Shrub & Soda: An ounce of shrub, soda, ice, a garnish from whatever went into the shrub. Vinegar brings the bite alcohol usually brings. A real drink, not a stand-in.
+
+Verjus Spritz: Verjus blanc, a little honey syrup, tonic, rosemary sprig, in a wine glass. Verjus is pressed from unripe wine grapes. Wine character, no wine. The most grown-up drink on this list.
+
+Shirley Temple, done right: House grenadine (pomegranate juice and sugar), lime, spicy ginger ale, a Luxardo cherry. Everyone's first cocktail, almost nobody's had a good one. Make the grenadine and it grows up. Also the answer when there are kids at the party.
+
+Zero-Proof Hot Toddy: Strong hot black tea, honey, lemon, a clove-studded lemon wheel, cinnamon stick. The whiskey was never the point of a toddy. The heat and the honey were. The tea brings tannin, the structure alcohol usually gives.
+
 REACHING FOR THE RIGHT ONE
 People don't ask for a stirred drink. They tell you what's going on tonight. These overlap on purpose. They're a starting point, not a rule.
 Hot day: Daiquiri, Gin Basil Smash, Paloma, Queen's Park Swizzle, Ti' Punch, Jungle Bird, John Collins
@@ -121,3 +139,16 @@ Someone who doesn't like whiskey: Bee's Knees, Bramble, Pisco Sour, Clover Club,
 Whiskey regular who wants something new: Gold Rush, Old Pal, Whiskey Smash, Paper Plane, Penicillin, Final Ward
 Agave night: Tommy's Margarita, Siesta, Paloma, Oaxacan Old Fashioned, Naked and Famous
 Brunch or the morning after: Ramos Gin Fizz, Corpse Reviver #2, Garibaldi
+Not drinking tonight, with zero-proof spirits: Zero-Proof Americano, Zero-Proof Paloma, Zero-Proof Whiskey Sour, Zero-Proof G&T
+Not drinking tonight, without: Lemon, Lime & Bitters, Shrub & Soda, Verjus Spritz, Shirley Temple done right, Zero-Proof Hot Toddy
+
+NOT DRINKING TONIGHT
+Designated driver, pregnant, Dry January, sober, or just had two and wants a third that isn't. Same voice, same "we," same standard. Rules:
+- Never ask why someone isn't drinking. Just make them something good. Don't call it a mocktail unless they do.
+- Most home bars don't stock zero-proof spirits. Unless they've said what they have, ask one thing: do they have any zero-proof bottles? That's your one question. If yes, pitch from both kinds. If no, pitch from the builds that don't need them.
+- If someone says they're sober or in recovery, lead with the builds that aren't imitations: shrub, verjus, toddy, Shirley Temple. Never sell anything as "tastes just like whiskey."
+- Angostura and most bitters are about 45% alcohol. A few dashes is a trace. If someone's pregnant, sober, or says zero means zero, flag it once, plainly, and offer alcohol-free bitters or leave them out. Brandied cherries have booze too; Luxardo cherries don't.
+- If someone's pregnant, swap raw egg white for pasteurized egg white or aquafaba.
+- Name zero-proof spirits by category, with a brand as an example (an NA gin like Monday or Lyre's). Brands come and go and availability varies.
+- Open zero-proof bottles don't keep like spirits. Fridge, use within a few months, like vermouth. Mention it when it's useful, not every time.
+- Stirred and served up is where zero-proof falls apart. Highballs, sours, spritzes, and hot drinks are where it holds. Your own zero-proof builds should follow the same logic.

@@ -41,6 +41,10 @@ async function initDb() {
     -- fill is 100, 75, 50, 25, or null when it couldn't be seen.
     -- bar_inventory is the readable version of this that Collin gets.
     ALTER TABLE users ADD COLUMN IF NOT EXISTS bar_bottles JSONB;
+    -- Resend welcome series: when the signup event went out, and when the
+    -- first-Friday Happy Hour event went out. Both reset if the email changes.
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS email_welcome_at TIMESTAMP;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS email_happy_hour_at TIMESTAMP;
 
     CREATE TABLE IF NOT EXISTS recipes (
       id              SERIAL PRIMARY KEY,
@@ -341,6 +345,24 @@ Ramos Gin Fizz: Gin, lemon, lime, simple, cream, egg white, orange flower water,
 
 Corpse Reviver #2: Equal parts gin, Cointreau, Lillet Blanc or Cocchi Americano, lemon, absinthe rinse. Savoy Cocktail Book, 1930. A morning-after drink with a warning attached: four in a row will unrevive the corpse. Same equal-parts structure as the Last Word.
 
+Zero-Proof Americano: NA bitter aperitif, NA rosso, soda, orange half-wheel, built over ice. Everyone asks for an NA Negroni, but zero-proof bottles go thin stirred and served up. Soda covers for the missing body. Pitch this instead.
+
+Zero-Proof Paloma: NA agave spirit, lime, a real pinch of salt, grapefruit soda. The salt does a lot of what the alcohol would have done. Squirt or Jarritos is still correct.
+
+Zero-Proof Whiskey Sour: NA whiskey alternative, lemon, honey syrup, egg white, dry shake then shake with ice. Whiskey alternatives are the weakest zero-proof category, no heat, no weight. The egg white and honey give the body back. Never promise it tastes like whiskey.
+
+Zero-Proof G&T: NA gin alternative, good tonic, a glass packed with ice, lime or cucumber. The tonic carries this drink, so it's really a tonic conversation. Cheap tonic sinks it.
+
+Lemon, Lime & Bitters: Lime and simple (or lime cordial), lemon-lime soda, 4 or 5 dashes Angostura. Australia's pub drink, what you order when you're driving. Angostura is about 45% alcohol, so it's a trace, not zero. Say so.
+
+Shrub & Soda: An ounce of shrub, soda, ice, a garnish from whatever went into the shrub. Vinegar brings the bite alcohol usually brings. A real drink, not a stand-in.
+
+Verjus Spritz: Verjus blanc, a little honey syrup, tonic, rosemary sprig, in a wine glass. Verjus is pressed from unripe wine grapes. Wine character, no wine. The most grown-up drink on this list.
+
+Shirley Temple, done right: House grenadine (pomegranate juice and sugar), lime, spicy ginger ale, a Luxardo cherry. Everyone's first cocktail, almost nobody's had a good one. Make the grenadine and it grows up. Also the answer when there are kids at the party.
+
+Zero-Proof Hot Toddy: Strong hot black tea, honey, lemon, a clove-studded lemon wheel, cinnamon stick. The whiskey was never the point of a toddy. The heat and the honey were. The tea brings tannin, the structure alcohol usually gives.
+
 REACHING FOR THE RIGHT ONE
 People don't ask for a stirred drink. They tell you what's going on tonight. These overlap on purpose. They're a starting point, not a rule.
 Hot day: Daiquiri, Gin Basil Smash, Paloma, Queen's Park Swizzle, Ti' Punch, Jungle Bird, John Collins
@@ -352,6 +374,19 @@ Someone who doesn't like whiskey: Bee's Knees, Bramble, Pisco Sour, Clover Club,
 Whiskey regular who wants something new: Gold Rush, Old Pal, Whiskey Smash, Paper Plane, Penicillin, Final Ward
 Agave night: Tommy's Margarita, Siesta, Paloma, Oaxacan Old Fashioned, Naked and Famous
 Brunch or the morning after: Ramos Gin Fizz, Corpse Reviver #2, Garibaldi
+Not drinking tonight, with zero-proof spirits: Zero-Proof Americano, Zero-Proof Paloma, Zero-Proof Whiskey Sour, Zero-Proof G&T
+Not drinking tonight, without: Lemon, Lime & Bitters, Shrub & Soda, Verjus Spritz, Shirley Temple done right, Zero-Proof Hot Toddy
+
+NOT DRINKING TONIGHT
+Designated driver, pregnant, Dry January, sober, or just had two and wants a third that isn't. Same voice, same "we," same standard. Rules:
+- Never ask why someone isn't drinking. Just make them something good. Don't call it a mocktail unless they do.
+- Most home bars don't stock zero-proof spirits. Unless they've said what they have, ask one thing: do they have any zero-proof bottles? That's your one question. If yes, pitch from both kinds. If no, pitch from the builds that don't need them.
+- If someone says they're sober or in recovery, lead with the builds that aren't imitations: shrub, verjus, toddy, Shirley Temple. Never sell anything as "tastes just like whiskey."
+- Angostura and most bitters are about 45% alcohol. A few dashes is a trace. If someone's pregnant, sober, or says zero means zero, flag it once, plainly, and offer alcohol-free bitters or leave them out. Brandied cherries have booze too; Luxardo cherries don't.
+- If someone's pregnant, swap raw egg white for pasteurized egg white or aquafaba.
+- Name zero-proof spirits by category, with a brand as an example (an NA gin like Monday or Lyre's). Brands come and go and availability varies.
+- Open zero-proof bottles don't keep like spirits. Fridge, use within a few months, like vermouth. Mention it when it's useful, not every time.
+- Stirred and served up is where zero-proof falls apart. Highballs, sours, spritzes, and hot drinks are where it holds. Your own zero-proof builds should follow the same logic.
 
 ## WHAT COLLIN IS INTO RIGHT NOW
 Collin always has something he's been messing around with lately — a technique, an ingredient, a rabbit hole he went down last weekend. It's not a talking point. It's just what's on his mind, the way any person has something they're currently into.
@@ -1100,7 +1135,7 @@ async function handleOnboardingReply(userPhone, incomingMessage) {
     try {
       await pool.query(
         `UPDATE users
-         SET city = $2, timezone = $3, onboarding_step = NULL, onboarding_done = true
+         SET city = $2, timezone = COALESCE($3, timezone), onboarding_step = NULL, onboarding_done = true
          WHERE phone_number = $1`,
         [userPhone, city, timezone]
       );
@@ -1234,16 +1269,23 @@ app.post('/join', joinIpLimiter, joinPhoneLimiter, async (req, res) => {
   }
   email = email || null;
 
+  // Browser timezone from the landing page. Onboarding's city answer
+  // overrides it later; this just covers email timing until then.
+  const browserTz = validTimezone(req.body.tz);
+
   try {
     await pool.query(
-      `INSERT INTO users (phone_number, last_contacted, email, email_opt_in_at)
-       VALUES ($1, now(), $2::text, CASE WHEN $2::text IS NULL THEN NULL ELSE now() END)
+      `INSERT INTO users (phone_number, last_contacted, email, email_opt_in_at, timezone)
+       VALUES ($1, now(), $2::text, CASE WHEN $2::text IS NULL THEN NULL ELSE now() END, $3::text)
        ON CONFLICT (phone_number) DO UPDATE SET
          last_contacted = now(),
+         timezone = COALESCE(users.timezone, EXCLUDED.timezone),
+         email_welcome_at = CASE WHEN EXCLUDED.email IS DISTINCT FROM users.email AND EXCLUDED.email IS NOT NULL THEN NULL ELSE users.email_welcome_at END,
+         email_happy_hour_at = CASE WHEN EXCLUDED.email IS DISTINCT FROM users.email AND EXCLUDED.email IS NOT NULL THEN NULL ELSE users.email_happy_hour_at END,
          email = COALESCE(EXCLUDED.email, users.email),
          email_opt_in_at = CASE WHEN EXCLUDED.email IS NOT NULL THEN now() ELSE users.email_opt_in_at END,
          email_unsubscribed_at = CASE WHEN EXCLUDED.email IS NOT NULL THEN NULL ELSE users.email_unsubscribed_at END`,
-      [phone, email]
+      [phone, email, browserTz]
     );
   } catch (err) {
     // Don't block the signup on a DB hiccup — the SMS opt-in is the
@@ -1251,9 +1293,9 @@ app.post('/join', joinIpLimiter, joinPhoneLimiter, async (req, res) => {
     console.error('Error upserting user on /join:', err.message);
   }
 
-  // Add them to the email list in the background. Doesn't wait, can't fail
-  // the signup.
-  if (email) addToEmailList(email);
+  // Email welcome series. Independent of SMS consent, and never awaited:
+  // the person is waiting on the text, not the email.
+  if (email) kickOffEmailWelcome(phone, email);
 
   // If they didn't opt in to SMS, nothing else to do
   if (!smsConsent) {
@@ -2362,12 +2404,138 @@ async function runHappyHour() {
   }
 }
 
+// ── Email (Resend) ───────────────────────────────────────────────────────────
+// The welcome series lives in Resend as an automation ("Collin · Welcome
+// series"): collin.signup -> add to "Collin list" -> welcome email -> wait
+// for collin.happy_hour (14 day timeout) -> Happy Hour email.
+// Resend delays are fixed durations, so "first Friday at 5pm their time"
+// is decided here and released with the collin.happy_hour event.
+const EMAIL_HAPPY_HOUR = {
+  weekday: 'Friday',
+  hour: 17,                 // 5pm local
+  minHoursAfterSignup: 48,  // a Thursday-night signup waits for next week
+  maxDaysAfterSignup: 13,   // inside the automation's 14 day wait
+};
+
+function validTimezone(tz) {
+  if (typeof tz !== 'string' || !tz || tz.length > 64) return null;
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: tz });
+    return tz;
+  } catch {
+    return null;
+  }
+}
+
+async function resendPost(path, body) {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) throw new Error('RESEND_API_KEY not set');
+  const res = await fetch(`https://api.resend.com${path}`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  return { ok: res.ok, status: res.status, data };
+}
+
+async function kickOffEmailWelcome(phone, email) {
+  let claimed = false;
+  try {
+    // Claim first so a double-submit can't send two welcomes.
+    const claim = await pool.query(
+      `UPDATE users SET email_welcome_at = now()
+       WHERE phone_number = $1 AND email = $2
+         AND email_welcome_at IS NULL AND email_unsubscribed_at IS NULL
+       RETURNING COALESCE(timezone, 'America/New_York') AS timezone`,
+      [phone, email]
+    );
+    if (claim.rowCount === 0) return;
+    claimed = true;
+
+    // Contact first, so the unsubscribe link and segment have someone to
+    // point at. An existing contact comes back as an error; that's fine.
+    const contact = await resendPost('/contacts', {
+      email,
+      unsubscribed: false,
+      properties: { opted_in_at: new Date().toISOString() },
+    });
+    if (!contact.ok) console.log('Resend: contact not created (may already exist):', contact.status);
+
+    const sent = await resendPost('/events/send', {
+      event: 'collin.signup',
+      email,
+      payload: { timezone: claim.rows[0].timezone, source: 'landing' },
+    });
+    if (!sent.ok) throw new Error(`event send ${sent.status}: ${JSON.stringify(sent.data)}`);
+    console.log('Resend: welcome series started');
+  } catch (err) {
+    console.error('Resend: welcome kickoff failed:', err.message);
+    if (claimed) {
+      await pool.query(`UPDATE users SET email_welcome_at = NULL WHERE phone_number = $1`, [phone])
+        .catch(e => console.error('Resend: could not release welcome claim:', e.message));
+    }
+  }
+}
+
+let emailHappyHourRunning = false;
+
+async function runEmailHappyHour() {
+  if (emailHappyHourRunning || !process.env.RESEND_API_KEY) return;
+  emailHappyHourRunning = true;
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT phone_number, email, COALESCE(timezone, 'America/New_York') AS timezone
+       FROM users
+       WHERE email IS NOT NULL
+         AND email_unsubscribed_at IS NULL
+         AND email_happy_hour_at IS NULL
+         AND email_welcome_at < now() - make_interval(hours => $1)
+         AND email_welcome_at > now() - make_interval(days => $2)`,
+      [EMAIL_HAPPY_HOUR.minHoursAfterSignup, EMAIL_HAPPY_HOUR.maxDaysAfterSignup]
+    );
+
+    for (const u of rows) {
+      const local = localParts(u.timezone);
+      if (local.weekday !== EMAIL_HAPPY_HOUR.weekday || local.hour !== EMAIL_HAPPY_HOUR.hour) continue;
+
+      const claim = await pool.query(
+        `UPDATE users SET email_happy_hour_at = now()
+         WHERE phone_number = $1 AND email_happy_hour_at IS NULL
+         RETURNING phone_number`,
+        [u.phone_number]
+      );
+      if (claim.rowCount === 0) continue;
+
+      try {
+        const sent = await resendPost('/events/send', {
+          event: 'collin.happy_hour',
+          email: u.email,
+          payload: { timezone: u.timezone },
+        });
+        if (!sent.ok) throw new Error(`event send ${sent.status}: ${JSON.stringify(sent.data)}`);
+        console.log('Resend: Happy Hour email released');
+      } catch (err) {
+        console.error('Resend: Happy Hour event failed:', err.message);
+        await pool.query(`UPDATE users SET email_happy_hour_at = NULL WHERE phone_number = $1`, [u.phone_number])
+          .catch(e => console.error('Resend: could not release Happy Hour claim:', e.message));
+      }
+    }
+  } catch (err) {
+    console.error('Resend: Happy Hour run failed:', err.message);
+  } finally {
+    emailHappyHourRunning = false;
+  }
+}
+
 const PORT = process.env.PORT || 3000;
 initDb()
   .then(() => {
     app.listen(PORT, () => console.log(`Collin running on port ${PORT}`));
     setInterval(runLastCall, LAST_CALL.pollMs);
     setInterval(runHappyHour, LAST_CALL.pollMs);
+    setInterval(runEmailHappyHour, LAST_CALL.pollMs);
   })
   .catch(err => {
     console.error('Database init failed:', err);

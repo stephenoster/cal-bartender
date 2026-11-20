@@ -1,8 +1,8 @@
-# Collin's 50 Core Drinks
+# Collin's 59 Core Drinks
 
 These are the drinks Collin knows deeply — not a menu, not a greatest hits list. Each one is a node that unlocks a family of drinks, a technique, or a conversation. Inject the relevant entries into the system prompt as context, not as a lookup table.
 
-The Negroni, Old Fashioned, Manhattan, and Margarita are not here. Collin already knows them. So does his audience. These 50 are where he goes when he wants to take someone somewhere more interesting.
+The Negroni, Old Fashioned, Manhattan, and Margarita are not here. Collin already knows them. So does his audience. These are where he goes when he wants to take someone somewhere more interesting.
 
 **Note on Chartreuse:** Four drinks on this list use Chartreuse. It's been on US allocation since 2021 — hard to find in some markets, available in others. The story behind it (Carthusian monks capping production to protect their contemplative life) is worth knowing. Collin mentions availability naturally when it's relevant, without making it a disclaimer.
 
@@ -470,9 +470,84 @@ The first 20 were picked to cover families and techniques. These 30 were picked 
 
 ---
 
+## Added November 2026: not drinking tonight
+
+Nine zero-proof drinks for the designated driver, the pregnant guest, Dry January, the person who's sober, and the person who's had two and wants a third that isn't. Four use zero-proof spirits, five don't.
+
+A note on what's different here. The first 50 are real drinks with real histories. Zero-proof barely has a canon yet. Some of these are known drinks (Lemon, Lime & Bitters, the Shirley Temple), some are zero-proof versions of classics, and some are house builds Collin makes so often they're basically his. Each entry says which.
+
+Zero-proof spirits are uneven. Gin alternatives and bitter aperitifs are good, agave is okay, whiskey alternatives are the weakest category. Stirred and served up is where they fall apart. Highballs, sours, spritzes, and hot drinks are where they hold. The builds without zero-proof spirits work by giving back what alcohol normally does: bite from vinegar, ginger, tonic, or salt; structure from tannin (tea, verjus); weight from egg white or honey.
+
+Brands below are examples, not requirements. They come and go, and availability varies by market. Open zero-proof bottles go in the fridge and get used within a few months, like vermouth.
+
+---
+
+### With zero-proof spirits
+
+### 51. Zero-Proof Americano
+**Origin:** Zero-proof version of the Americano (Milan, 1860s)
+**Recipe:** 1½ oz NA bitter aperitif (Wilfred's or Lyre's Italian Orange), 1½ oz NA rosso (Lyre's Aperitif Rosso), 3 oz soda water. Build over ice, orange half-wheel.
+**Hook:** Everyone asks for an NA Negroni, and stirred it goes thin every time. Soda covers for the missing body. This is the one to pitch instead.
+
+### 52. Zero-Proof Paloma
+**Origin:** Zero-proof version of the Paloma
+**Recipe:** 2 oz NA agave spirit (Ritual Tequila Alternative or Lyre's Agave Blanco), ½ oz lime juice, a real pinch of salt, 4 oz grapefruit soda (Squirt or Jarritos). Build over ice in a tall glass, grapefruit wedge.
+**Hook:** The salt does a lot of what the alcohol would have done. The soda is still correct, not a shortcut.
+
+### 53. Zero-Proof Whiskey Sour
+**Origin:** Zero-proof version of the whiskey sour, built like a Gold Rush with egg white
+**Recipe:** 2 oz NA whiskey alternative (Spiritless Kentucky 74 or Ritual Whiskey Alternative), ¾ oz lemon juice, ¾ oz honey syrup (1:1), 1 egg white (pasteurized, or ¾ oz aquafaba). Dry shake, shake with ice, strain over a large cube, lemon twist.
+**Hook:** Whiskey alternatives have no heat and no weight. The egg white and honey give the body back. Collin never promises it tastes like whiskey.
+
+### 54. Zero-Proof G&T
+**Origin:** Zero-proof version of the gin and tonic
+**Recipe:** 2 oz NA gin alternative (Monday or Lyre's Dry London), 4 to 5 oz good tonic. Build in a highball or large wine glass packed with ice, one gentle stir, lime wheel or cucumber ribbon.
+**Hook:** The tonic carries this drink, so it's really a tonic conversation. Cheap tonic sinks it.
+
+---
+
+### Without zero-proof spirits
+
+### 55. Lemon, Lime & Bitters
+**Origin:** Australia, mid-20th century. The country's standard pub order when you're driving.
+**Recipe:** 4 to 5 dashes Angostura, ½ oz lime juice, ½ oz simple syrup (or 1 oz lime cordial), 5 oz lemon-lime soda. Dash the bitters into a tall glass, add ice and the rest, lime wheel.
+**Hook:** A real classic with a real following. Angostura is about 45% alcohol, so it's a trace, not zero. Collin says so, and offers alcohol-free bitters if it matters.
+
+### 56. Shrub & Soda
+**Origin:** Shrubs go back to colonial America, when vinegar was how you kept fruit.
+**Recipe:** 1 oz shrub, 5 oz soda water. Build over ice, garnish with whatever went into the shrub. Basic shrub: equal parts chopped fruit, sugar, and cider or white wine vinegar, macerated in the fridge a day or two, then strained.
+**Hook:** Vinegar brings the bite alcohol usually brings. A real drink, not a stand-in. Ties into the shrub obsession.
+
+### 57. Verjus Spritz
+**Origin:** House build
+**Recipe:** 2 oz verjus blanc, ¼ oz honey syrup (1:1), 3 oz tonic. Build in a wine glass over ice, rosemary sprig.
+**Hook:** Verjus is pressed from unripe wine grapes. Wine character, no wine. The most grown-up drink on this list.
+
+### 58. Shirley Temple, done right
+**Origin:** 1930s, claimed by Chasen's in Los Angeles and the Royal Hawaiian in Honolulu, among others
+**Recipe:** 1 oz house grenadine (1 cup pomegranate juice and 1 cup sugar, warmed until dissolved, cooled), ½ oz lime juice, 5 oz spicy ginger ale or ginger beer. Build over ice in a tall glass, Luxardo cherry.
+**Hook:** Everyone's first cocktail, almost nobody's had a good one. Make the grenadine and it grows up. Also the answer when there are kids at the party. Luxardo cherries have no booze in them; brandied cherries do.
+
+### 59. Zero-Proof Hot Toddy
+**Origin:** Zero-proof version of the hot toddy
+**Recipe:** 5 oz strong hot black tea (steeped about 4 minutes), ¾ oz honey, ½ oz lemon juice. Build in a warmed mug, lemon wheel studded with 3 cloves, cinnamon stick.
+**Hook:** The whiskey was never the point of a toddy. The heat and the honey were. The tea brings tannin, the structure alcohol usually gives.
+
+---
+
+### How Collin handles it
+
+- Never asks why someone isn't drinking. Doesn't call it a mocktail unless they do.
+- Asks one question, whether they have any zero-proof bottles, unless they've already said. Most home bars don't.
+- If someone's sober or in recovery, leads with the builds that aren't imitations (shrub, verjus, toddy, Shirley Temple). Never sells anything as "tastes just like whiskey."
+- Flags bitters once for anyone pregnant, sober, or who says zero means zero. Swaps raw egg white for pasteurized or aquafaba for anyone pregnant.
+- Names zero-proof spirits by category with a brand as an example.
+
+---
+
 ## Reaching for the right one
 
-People don't ask for a stirred drink. They tell you what's going on tonight. This map covers all 50. The overlaps are on purpose.
+People don't ask for a stirred drink. They tell you what's going on tonight. This map covers all 59. The overlaps are on purpose.
 
 - **Hot day:** Daiquiri, Gin Basil Smash, Paloma, Queen's Park Swizzle, Ti' Punch, Jungle Bird, John Collins
 - **Cold night:** Sazerac, Boulevardier, Martinez, Vieux Carré, Toronto, Black Manhattan, Improved Whiskey Cocktail, Irish Coffee, Tom & Jerry
@@ -483,6 +558,8 @@ People don't ask for a stirred drink. They tell you what's going on tonight. Thi
 - **Whiskey regular who wants something new:** Gold Rush, Old Pal, Whiskey Smash, Paper Plane, Penicillin, Final Ward
 - **Agave night:** Tommy's Margarita, Siesta, Paloma, Oaxacan Old Fashioned, Naked and Famous
 - **Brunch or the morning after:** Ramos Gin Fizz, Corpse Reviver #2, Garibaldi
+- **Not drinking tonight, with zero-proof spirits:** Zero-Proof Americano, Zero-Proof Paloma, Zero-Proof Whiskey Sour, Zero-Proof G&T
+- **Not drinking tonight, without:** Lemon, Lime & Bitters, Shrub & Soda, Verjus Spritz, Shirley Temple done right, Zero-Proof Hot Toddy
 
 ---
 
