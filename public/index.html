@@ -259,8 +259,8 @@
         </div>
 
         <div class="done" id="doneWeb" role="status" hidden>
-          <h2 class="display">You're in.</h2>
-          <p>You didn't opt in to texts, so Collin won't message you. You can still talk drinks with him in your browser.</p>
+          <h2 class="display" id="doneWebTitle">Texts are off.</h2>
+          <p id="doneWebBody">You didn't opt in to texts, so Collin won't message you. You can still talk drinks with him in your browser.</p>
           <a class="btn" href="/collin.html">Chat in your browser <span aria-hidden="true">→</span></a>
           <button type="button" class="text-btn" id="goBack">Changed your mind? Go back</button>
         </div>
@@ -481,6 +481,13 @@ C) Stirred and slow. Mezcal, honey, grapefruit peel.</p>
       });
       if (!res.ok) throw new Error('server error');
       form.hidden = true;
+      if (!consent.checked) {
+        // No texts. If they gave an email, lead with the list they did join.
+        $('doneWebTitle').textContent = em ? "You're on the email list." : 'Texts are off.';
+        $('doneWebBody').textContent = em
+          ? "Collin will send news and seasonal recipes. You didn't tick the box for texts, so he won't text you, but you can chat with him in your browser."
+          : "You didn't opt in to texts, so Collin won't message you. You can still talk drinks with him in your browser.";
+      }
       show(consent.checked ? doneTexts : doneWeb, true);
     } catch (err) {
       show(formError, true);
