@@ -1160,6 +1160,65 @@ async function sendOnboardingOpener(userPhone) {
   }
 }
 
+// ── Email list (Resend) ─────────────────────────────────────────────────────
+// When someone gives their email on the signup form, add them to Collin's
+// Resend contacts so they get the monthly email. Giving the email is the
+// opt-in (the form says it's for news and seasonal recipes).
+// Needs RESEND_API_KEY (a Full access key, since Sending access keys can't
+// add contacts). RESEND_SEGMENT_ID is optional: if set, new people also go
+// into that segment, which is what broadcasts get sent to.
+// Never throws and never holds up the signup. If the key is missing it does
+// nothing at all.
+// Unsubscribes happen on Resend's side, through the unsubscribe link in each
+// broadcast. Signing up again with the same email on the site counts as
+// opting back in, same as the database does.
+const RESEND_API = 'https://api.resend.com';
+
+async function resendCall(method, urlPath, body) {
+  const res = await fetch(RESEND_API + urlPath, {
+    method,
+    headers: {
+      'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: body ? JSON.stringify(body) : undefined,
+    signal: AbortSignal.timeout(8000),
+  });
+  let data = null;
+  try { data = await res.json(); } catch (_) { /* empty body is fine */ }
+  return { ok: res.ok, status: res.status, data };
+}
+
+async function addToEmailList(email) {
+  if (!process.env.RESEND_API_KEY || !email) return;
+  const segmentId = (process.env.RESEND_SEGMENT_ID || '').trim();
+  const who = encodeURIComponent(email);
+
+  try {
+    const body = { email, unsubscribed: false };
+    if (segmentId) body.segments = [{ id: segmentId }];
+    const created = await resendCall('POST', '/contacts', body);
+    if (created.ok) return;
+
+    // Most likely they're already a contact. Mark them subscribed again
+    // (they just opted in on the site) and make sure they're in the segment.
+    const updated = await resendCall('PATCH', `/contacts/${who}`, { unsubscribed: false });
+    if (!updated.ok) {
+      console.error(`Resend: could not add contact (create ${created.status}, update ${updated.status}):`,
+        JSON.stringify(created.data));
+      return;
+    }
+    if (segmentId) {
+      const seg = await resendCall('POST', `/contacts/${who}/segments/${encodeURIComponent(segmentId)}`);
+      if (!seg.ok && seg.status !== 409 && seg.status !== 422) {
+        console.error(`Resend: could not add contact to segment (${seg.status}):`, JSON.stringify(seg.data));
+      }
+    }
+  } catch (err) {
+    console.error('Resend: error adding contact:', err.message);
+  }
+}
+
 // ── Web opt-in form endpoint ────────────────────────────────────────────────
 app.post('/join', joinIpLimiter, joinPhoneLimiter, async (req, res) => {
   const { phone, smsConsent } = req.body;
@@ -1191,6 +1250,10 @@ app.post('/join', joinIpLimiter, joinPhoneLimiter, async (req, res) => {
     // part the person is actually waiting on. Just log it.
     console.error('Error upserting user on /join:', err.message);
   }
+
+  // Add them to the email list in the background. Doesn't wait, can't fail
+  // the signup.
+  if (email) addToEmailList(email);
 
   // If they didn't opt in to SMS, nothing else to do
   if (!smsConsent) {
