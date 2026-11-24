@@ -420,7 +420,8 @@ When you deliver a full recipe, always append [RECIPE] on a new line at the very
 // - two or more of the same bottle in one text add up, so two half-full
 //   bottles of Buffalo Trace are saved as fill 100 with count 2, and a full
 //   one plus a half is 150
-// A finished bottle stays on the list until a later photo shows otherwise.
+// A bottle comes off the list when they tell Collin they've finished it
+// (see [EMPTY: ...] below). One they finish without saying so stays.
 const BAR_PHOTO = {
   maxImages: 4,
   maxBytes: 5 * 1024 * 1024,   // Anthropic's per-image limit
@@ -655,9 +656,64 @@ function barInventoryContext(inventory, ageSeconds) {
 Built up from the photos they've sent, last updated ${describeGap(ageSeconds)} ago:
 ${inventory}
 
-This is what you've seen on their shelf, not everything they own. A bottle stays on the list until a newer photo shows it again, so something they've finished may still be here. How full each bottle is, in brackets, is a rough guess from the photo. Lean on it when you pitch, and if a drink needs a lot of something that's running low, say so in passing. It's still fine to suggest one thing they'd need to grab. Never recite the list back to them.
+This is what you've seen on their shelf, not everything they own. Something they've finished without telling you may still be here. How full each bottle is, in brackets, is a rough guess from the photo. Lean on it when you pitch, and if a drink needs a lot of something that's running low, say so in passing. It's still fine to suggest one thing they'd need to grab. Never recite the list back to them.
+
+If they tell you they've finished or run out of something on this list, take it off: add a line at the very end of your reply, [EMPTY: Category: Name], with the category and name copied exactly as they're written above, one line per bottle, before [RECIPE] if there is one. Only when it's all gone. Not when it's just getting low, and not when they've finished one of two bottles. If you're not sure which bottle they mean, ask instead. Never mention the list or the marker to them.
 
 Notes like [sent a photo] in the history are added by the system. Never write them yourself.`;
+}
+
+// ── [EMPTY: ...] marker handling ────────────────────────────────────────────
+// Collin adds [EMPTY: Category: Name] lines when someone says they've
+// finished a bottle on their list. The lines are pulled out before the reply
+// is saved or sent, and those bottles come off their bar.
+const EMPTY_MARKER = /^[ \t]*\[EMPTY:\s*([^\]\n]*)\][ \t]*$/gim;
+
+function extractEmptyMarkers(text) {
+  const names = [];
+  const cleaned = text.replace(EMPTY_MARKER, (_, name) => {
+    if (name.trim()) names.push(name.trim());
+    return '';
+  });
+  return { names, text: cleaned.replace(/\n{3,}/g, '\n\n').trim() };
+}
+
+// Matches "Category: Name" or just "Name", ignoring case and a fill note
+// in brackets at the end, like "(about half left)".
+function removeBarItems(items, names) {
+  const norm = s => s.toLowerCase().replace(/\s+/g, ' ').trim();
+  const wanted = new Set();
+  for (const name of names) {
+    wanted.add(norm(name));
+    wanted.add(norm(name.replace(/\s*\([^()]*\)\s*$/, '')));
+  }
+  return items.filter(i =>
+    !wanted.has(norm(`${i.category}: ${i.name}`)) && !wanted.has(norm(i.name))
+  );
+}
+
+// Takes the bottles off their saved bar. Never throws.
+async function markBottlesEmpty(userPhone, names) {
+  if (!names.length) return;
+  try {
+    const { rows } = await pool.query(
+      `SELECT bar_bottles FROM users WHERE phone_number = $1`,
+      [userPhone]
+    );
+    const existing = cleanBarItems(rows[0]?.bar_bottles);
+    const items = removeBarItems(existing, names);
+    const removed = existing.length - items.length;
+    console.log(`Bar: marked empty ${names.length} name(s), removed ${removed} item(s)`);
+    if (removed === 0) return;
+    await pool.query(
+      `UPDATE users
+       SET bar_bottles = $2::jsonb, bar_inventory = $3, bar_inventory_updated_at = now()
+       WHERE phone_number = $1`,
+      [userPhone, JSON.stringify(items), renderBarInventory(items) || null]
+    );
+  } catch (err) {
+    console.error('Bar: error removing empty bottles:', err.message);
+  }
 }
 
 function describeMediaNote(media) {
@@ -1707,8 +1763,12 @@ app.post('/sms-telnyx', async (req, res) => {
       throw new Error('No text content returned by Anthropic');
     }
 
-    const hasRecipe = reply.includes('[RECIPE]');
-    const cleanReply = stripRecipeMarker(reply);
+    const emptied = extractEmptyMarkers(reply);
+    await markBottlesEmpty(userPhone, emptied.names);
+
+    const hasRecipe = emptied.text.includes('[RECIPE]');
+    const cleanReply = stripRecipeMarker(emptied.text);
+    if (!cleanReply) throw new Error('Reply was only markers');
 
     console.log(`Telnyx: reply generated (${cleanReply.length} chars)`);
 
