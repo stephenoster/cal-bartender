@@ -37,8 +37,11 @@ async function initDb() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS bar_inventory TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS bar_inventory_updated_at TIMESTAMP;
     -- The same list, one entry per item with a rough fill level:
-    -- [{"category": "Bourbon", "name": "Buffalo Trace", "fill": 50}, ...]
-    -- fill is 100, 75, 50, 25, or null when it couldn't be seen.
+    -- [{"category": "Bourbon", "name": "Buffalo Trace", "fill": 150, "count": 2}, ...]
+    -- fill is a percent of one bottle in steps of 25, added up across
+    -- bottles (150 is a bottle and a half), or null when it couldn't be
+    -- seen. count is how many bottles; entries saved before it existed
+    -- count as 1.
     -- bar_inventory is the readable version of this that Collin gets.
     ALTER TABLE users ADD COLUMN IF NOT EXISTS bar_bottles JSONB;
     -- Resend welcome series: when the signup event went out, and when the
@@ -410,16 +413,20 @@ When you deliver a full recipe, always append [RECIPE] on a new line at the very
 // (bar_inventory) that Collin sees on every reply after that. The photo
 // itself is never stored, only the list.
 //
-// Photos within mergeWindowMinutes of the last one add to the list (one
-// shelf at a time), and the newer photo wins for a bottle seen twice. After
-// that, a new photo replaces the list, since the bar has probably changed.
+// Every photo adds to the person's bar. Nothing is ever replaced wholesale:
+// - something new gets added
+// - a bottle seen again takes the newest fill level, higher or lower,
+//   unless the new photo couldn't see how full it is
+// - two or more of the same bottle in one text add up, so two half-full
+//   bottles of Buffalo Trace are saved as fill 100 with count 2, and a full
+//   one plus a half is 150
+// A finished bottle stays on the list until a later photo shows otherwise.
 const BAR_PHOTO = {
   maxImages: 4,
   maxBytes: 5 * 1024 * 1024,   // Anthropic's per-image limit
-  mergeWindowMinutes: 30,
-  maxItems: 80,
-  maxInventoryChars: 2000,
-  fillLevels: [100, 75, 50, 25],
+  maxItems: 150,               // past this, the bottles seen longest ago drop off
+  maxInventoryChars: 4000,
+  maxCount: 20,
   types: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
 };
 
@@ -432,13 +439,22 @@ items: if is_bar, one entry for each bottle or ingredient you can see. Empty lis
 - category: what kind of thing it is, like Bourbon, Gin, Amaro, Vermouth, Bitters, Syrup, Citrus, Garnish, Tool.
 - name: brand and expression when the label is readable, like "Old Forester 1920". If you can't read a label, describe the bottle briefly and say so, like "green bottle, maybe Chartreuse". Never invent a brand.
 - fill: for a bottle, roughly how full it is. 100 is full or close to it, 75 is about three quarters, 50 about half, 25 a quarter or less. Use null when you can't see the liquid line, like a dark or opaque bottle, and for anything that isn't a bottle. Don't guess.
+If there are two or more bottles of the same thing, list each bottle as its own entry with its own fill, using the same category and name. If one bottle shows up in more than one photo, list it once.
 Include syrups, citrus, garnishes and tools if they're visible.
 
 description: one short plain sentence on what the photos show.`;
 
 const FILL_LABELS = { 100: 'full', 75: 'about 3/4 left', 50: 'about half left', 25: 'about 1/4 left or less' };
 
-// Cleans up whatever the model returned into [{category, name, fill}].
+// fill is a percent of one bottle in steps of 25. It goes past 100 when
+// there's more than one bottle (150 is a bottle and a half).
+function cleanFill(value) {
+  const n = Number(value);
+  return Number.isInteger(n) && n > 0 && n % 25 === 0 && n <= BAR_PHOTO.maxCount * 100 ? n : null;
+}
+
+// Cleans up a list, from the model or the database, into
+// [{category, name, fill, count}].
 function cleanBarItems(items) {
   if (!Array.isArray(items)) return [];
   return items
@@ -447,7 +463,8 @@ function cleanBarItems(items) {
     .map(i => ({
       category: (typeof i.category === 'string' && i.category.trim() ? i.category.trim() : 'Other').slice(0, 40),
       name: i.name.trim().slice(0, 80),
-      fill: BAR_PHOTO.fillLevels.includes(Number(i.fill)) ? Number(i.fill) : null,
+      fill: cleanFill(i.fill),
+      count: Number.isInteger(i.count) && i.count > 0 ? Math.min(i.count, BAR_PHOTO.maxCount) : 1,
     }));
 }
 
@@ -455,25 +472,62 @@ function barItemKey(item) {
   return `${item.category}|${item.name}`.toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
-// Adds what a new photo shows to the existing list. A bottle seen again takes
-// the new fill level, unless the new photo couldn't see it.
+// Within one text, two entries for the same bottle are two bottles: add up
+// the count and the fill. If any of them couldn't be read, the total is
+// unknown rather than too low.
+function combineSameBottles(items) {
+  const combined = new Map();
+  for (const item of items) {
+    const key = barItemKey(item);
+    const prev = combined.get(key);
+    if (!prev) {
+      combined.set(key, { ...item });
+      continue;
+    }
+    prev.count = Math.min(prev.count + item.count, BAR_PHOTO.maxCount);
+    prev.fill = prev.fill !== null && item.fill !== null ? cleanFill(prev.fill + item.fill) : null;
+  }
+  return [...combined.values()];
+}
+
+// Adds what a new text shows to their bar. A bottle seen again takes the new
+// reading. If the new photo couldn't see how full it is and it's still the
+// same number of bottles, the old level stays. Recently seen items move to
+// the end, so if the list ever passes maxItems, the oldest sightings drop.
 function mergeBarItems(existing, incoming) {
   const merged = new Map(existing.map(i => [barItemKey(i), i]));
   for (const item of incoming) {
-    const old = merged.get(barItemKey(item));
-    merged.set(barItemKey(item), old ? { ...item, fill: item.fill ?? old.fill } : item);
+    const key = barItemKey(item);
+    const old = merged.get(key);
+    const keepOldFill = old && item.fill === null && item.count === old.count;
+    merged.delete(key);
+    merged.set(key, keepOldFill ? { ...item, fill: old.fill } : item);
   }
-  return [...merged.values()].slice(0, BAR_PHOTO.maxItems);
+  return [...merged.values()].slice(-BAR_PHOTO.maxItems);
+}
+
+// 150 -> "1 1/2", 50 -> "1/2", 200 -> "2"
+function bottleAmount(fill) {
+  const whole = Math.floor(fill / 100);
+  const part = { 0: '', 25: '1/4', 50: '1/2', 75: '3/4' }[fill % 100];
+  return [whole || '', part].filter(Boolean).join(' ');
+}
+
+function barItemLabel(item) {
+  if (item.count === 1 && item.fill && item.fill <= 100) return `${item.name} (${FILL_LABELS[item.fill]})`;
+  const notes = [];
+  if (item.count > 1) notes.push(`${item.count} bottles`);
+  if (item.fill) notes.push(`about ${bottleAmount(item.fill)} ${item.fill > 100 ? 'bottles' : 'bottle'} left in total`);
+  return notes.length ? `${item.name} (${notes.join(', ')})` : item.name;
 }
 
 // The readable list Collin sees, one line per category:
-// Bourbon: Buffalo Trace (about half left), Old Forester 1920 (full)
+// Bourbon: Buffalo Trace (2 bottles, about 1 1/2 bottles left in total), Old Forester 1920 (full)
 function renderBarInventory(items) {
   const byCategory = new Map();
   for (const item of items) {
-    const label = item.fill ? `${item.name} (${FILL_LABELS[item.fill]})` : item.name;
     if (!byCategory.has(item.category)) byCategory.set(item.category, []);
-    byCategory.get(item.category).push(label);
+    byCategory.get(item.category).push(barItemLabel(item));
   }
   return [...byCategory]
     .map(([category, names]) => `${category}: ${names.join(', ')}`)
@@ -508,10 +562,10 @@ async function fetchImageAsBase64(item) {
 async function readBarPhotos(images, existingItems) {
   const imageBlocks = await Promise.all(images.map(fetchImageAsBase64));
 
-  // On a follow-up photo, show the model the names already on the list so a
-  // bottle seen twice gets the same name and merges instead of doubling up.
+  // Show the model the names already on their bar so a bottle seen again
+  // gets the same name and updates instead of doubling up.
   const ask = existingItems?.length
-    ? `They sent another photo a few minutes ago. Already on the list:\n${existingItems.map(i => `${i.category}: ${i.name}`).join('\n')}\n\nList what's in these photos. If you see one of those again, use exactly the same category and name.`
+    ? `Already on their bar from earlier photos:\n${existingItems.map(i => `${i.category}: ${i.name}`).join('\n')}\n\nList what's in these photos. If you see one of those again, use exactly the same category and name.`
     : 'Read these photos.';
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -536,7 +590,7 @@ async function readBarPhotos(images, existingItems) {
   const json = text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
   const parsed = JSON.parse(json);
 
-  const items = cleanBarItems(parsed.items);
+  const items = combineSameBottles(cleanBarItems(parsed.items));
   return {
     isBar: parsed.is_bar === true && items.length > 0,
     items,
@@ -563,22 +617,20 @@ They sent a file you can't open, like a video, voice memo, or document. Say so i
 
   try {
     const { rows } = await pool.query(
-      `SELECT bar_bottles,
-              bar_inventory_updated_at > now() - make_interval(mins => $2) AS recent
-       FROM users WHERE phone_number = $1`,
-      [userPhone, BAR_PHOTO.mergeWindowMinutes]
+      `SELECT bar_bottles FROM users WHERE phone_number = $1`,
+      [userPhone]
     );
-    const existing = rows[0]?.recent ? cleanBarItems(rows[0].bar_bottles) : null;
+    const existing = cleanBarItems(rows[0]?.bar_bottles);
 
     const result = await readBarPhotos(images, existing);
-    console.log(`Bar photo: read ${images.length} image(s), is_bar=${result.isBar}, items=${result.items.length}, merged=${Boolean(existing?.length)}`);
+    console.log(`Bar photo: read ${images.length} image(s), is_bar=${result.isBar}, items=${result.items.length}, already_had=${existing.length}`);
 
     if (!result.isBar) {
       return `## WHAT THEY JUST SENT
 They just texted a photo, but it isn't their bar. It shows: ${result.description || 'something other than bottles'}. React to it briefly like a person would, then keep going. Don't treat it as their bar.`;
     }
 
-    const items = existing?.length ? mergeBarItems(existing, result.items) : result.items;
+    const items = mergeBarItems(existing, result.items);
     await pool.query(
       `UPDATE users
        SET bar_bottles = $2::jsonb, bar_inventory = $3, bar_inventory_updated_at = now()
@@ -600,10 +652,10 @@ They just texted a photo, but it didn't come through on your end. Tell them in a
 function barInventoryContext(inventory, ageSeconds) {
   if (!inventory) return '';
   return `## THEIR BAR
-From a photo they sent ${describeGap(ageSeconds)} ago:
+Built up from the photos they've sent, last updated ${describeGap(ageSeconds)} ago:
 ${inventory}
 
-This is what you saw on their shelf, not everything they own, and it may be out of date. How full each bottle is, in brackets, is a rough guess from the photo. Lean on it when you pitch, and if a drink needs a lot of something that's running low, say so in passing. It's still fine to suggest one thing they'd need to grab. Never recite the list back to them.
+This is what you've seen on their shelf, not everything they own. A bottle stays on the list until a newer photo shows it again, so something they've finished may still be here. How full each bottle is, in brackets, is a rough guess from the photo. Lean on it when you pitch, and if a drink needs a lot of something that's running low, say so in passing. It's still fine to suggest one thing they'd need to grab. Never recite the list back to them.
 
 Notes like [sent a photo] in the history are added by the system. Never write them yourself.`;
 }
