@@ -1624,7 +1624,7 @@ app.post('/sms-telnyx', async (req, res) => {
         body: JSON.stringify({
           from: telnyxPhone,
           to: userPhone,
-          text: "Collin Thomas: For help call +17048903868. Msg frequency varies. Msg & data rates may apply. Reply STOP to opt out.",
+          text: "Collin Thomas: For help email hello@collinthomas.bar. Msg frequency varies. Msg & data rates may apply. Reply STOP to opt out.",
         }),
       });
       console.log('Telnyx: HELP response sent');
